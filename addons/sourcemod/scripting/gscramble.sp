@@ -22,13 +22,13 @@ along with this plugin.  If not, see <http://www.gnu.org/licenses/>.
 *************************************************************************
 *************************************************************************
 File Information
-$Id: $ID$ $
-$Author: $Author$ $
-$Revision: $Rev$ $
-$Date: $Date$ $
-$LastChangedBy: $Author$ $
-$LastChangedDate: 2009-12-27 12:03:59 -0700 (Sun, 27 Dec 2009) $
-$URL: $URL$ $
+$Id$ID$ $
+$Author$Author$ $
+$Revision$Rev$ $
+$Date$Date$ $
+$LastChangedBy$Author$ $
+$LastChangedDate$Date$ $
+$URL$URL$ $
 $Copyright: (c) TF2 Team Manager 2010-2011$
 *************************************************************************
 *************************************************************************
