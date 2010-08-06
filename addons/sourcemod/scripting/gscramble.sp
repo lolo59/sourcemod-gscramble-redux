@@ -22,14 +22,23 @@ along with this plugin.  If not, see <http://www.gnu.org/licenses/>.
 *************************************************************************
 *************************************************************************
 File Information
-$Id$ID$ $
+$Id$
 $Author$Author$ $
-$Revision$Rev$ $
-$Date$Date$ $
-$LastChangedBy$Author$ $
-$LastChangedDate$Date$ $
-$URL$URL$ $
+$Revision$
+$Date$
+$LastChangedBy$
+$LastChangedDate$
+$URL$
 $Copyright: (c) TF2 Team Manager 2010-2011$
 *************************************************************************
 *************************************************************************
 */
+
+#pragma semicolon 1
+#include <sourcemod>
+#include <sdktools>
+#include <tf2>
+#include <tf2_stocks>
+#include <clientprefs>
+
+#define VERSION "$Revision$"
