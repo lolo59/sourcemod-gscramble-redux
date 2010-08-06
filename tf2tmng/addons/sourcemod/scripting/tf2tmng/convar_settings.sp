@@ -23,13 +23,13 @@ along with this plugin.  If not, see <http://www.gnu.org/licenses/>.
 *************************************************************************
 *************************************************************************
 File Information
-$Id: tf2tmng.sp 11 2010-08-06 08:50:07Z brutalgoergectf $
-$Author: brutalgoergectf $Author$ $
-$Revision: 11 $
-$Date: 2010-08-06 02:50:07 -0600 (Fri, 06 Aug 2010) $
-$LastChangedBy: brutalgoergectf $
-$LastChangedDate: 2010-08-06 02:50:07 -0600 (Fri, 06 Aug 2010) $
-$URL: https://tf2tmng.googlecode.com/svn/trunk/tf2tmng/addons/sourcemod/scripting/tf2tmng.sp $
+$Id$
+$Author$Author$ $
+$Revision$
+$Date$
+$LastChangedBy$
+$LastChangedDate$
+$URL$
 $Copyright: (c) TF2 Team Manager 2010-2011$
 *************************************************************************
 *************************************************************************
