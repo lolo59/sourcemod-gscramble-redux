@@ -83,7 +83,7 @@ enum e_clientSettings
 {
 	bool:bScrambleImmune,
 	bool:bBalanceImmune,
-	iConnectTime,
+	iLastConnectTime,
 	iBalanceTime,
 	bool:TeamChangeBlocked,
 	iFrags,
@@ -120,6 +120,7 @@ enum e_RoundState
 new g_aTeams[e_Teams];
 new g_aTeamData[e_Names][e_TeamData];
 new g_aPlayers[MAXPLAYERS+1][e_clientSettings];
+new bool:g_bClientPrefs;
 
 public Plugin:myinfo = 
 {
@@ -132,6 +133,9 @@ public Plugin:myinfo =
 
 public OnPluginStart()
 {
+	g_bLoading = true;
+	CheckGameMod();
+	CheckClientPrefs();
 	CreateConVars();
 	LoadConVarListeners();
 	RegCommands();
@@ -141,6 +145,30 @@ public OnPluginStart()
 	AutoExecConfig(false, "auto_scramble", "tf2tmng");
 	AutoExecConfig(false, "auto_balance", "tf2tmng");
 	LoadTranslations("tf2tmng.phrases");
+	g_bLoading = false;
+}
+
+stock CheckGameMod()
+{
+	decl String:sMod[5];
+	GetGameFolderName(sMod, sizeof(sMod));
+	if (!StrEqual(sMod, "TF", false))
+	{
+		SetFailState("This plugin only works on Team Fortress 2");
+	}
+}
+
+stock CheckClientPrefs()
+{
+	decl String:sExtError[133];
+	if (GetExtensionFileStatus("clientprefs.ext", sExtError, sizeof(sExtError)) == 1)
+	{
+		g_bClientPrefs = true;
+	}
+	else
+	{
+		LogError("The clientprefs extension is not running correctly. %s", sExtError);
+	}
 }
 
 public OnConfigsExecuted()
@@ -156,4 +184,12 @@ public OnClientPostAdminCheck(client)
 public OnMapStart()
 {
 	ResetData();
+}
+
+stock MyLogMessage(const String:message[])
+{
+	if (g_bLoading || GetConVarBool(g_hDetailedLog))
+	{
+		LogMessage("%s", message);
+	}
 }

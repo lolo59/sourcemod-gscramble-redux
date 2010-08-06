@@ -44,6 +44,8 @@ new Handle:g_hRageLimit		= INVALID_HANDLE;
 new Handle:g_hGoals			= INVALID_HANDLE;
 new Handle:g_hSkill			= INVALID_HANDLE;
 new Handle:g_hAction			= INVALID_HANDLE;
+new Handle:g_hPreGame			= INVALID_HANDLE;
+new Handle:g_hRandomSwaps	= INVALID_HANDLE;
 
 new Handle:g_hScrImm_Admin	= INVALID_HANDLE;
 new Handle:g_hScrImm_AdmFlags = INVALID_HANDLE;
@@ -89,8 +91,14 @@ CreateScrambleConVars()
 	g_hSkill			= CreateConVar("tf2tmng_skill_difference", "0", "Computes teams' skills with avg score, avg Kill ratio, and AVG connection time, then compares them.", FCVAR_PLUGIN, true, 0.0, false);
 	g_hAction			= CreateConVar("tf2tmng_auto_action", "0", "Action to take if there is a trigger. 0 to scramble, 1 to start a vote", FCVAR_PLUGIN, true, 0.0, true, 1.0);
 	g_hTriggers		= CreateConVar("tf2tmng_multiple_triggers", "1", "Number if successive triggers before an action is taken", FCVAR_PLUGIN, true, 1.0, false);
-
+	g_hPreGame		= CreateConVar("tf2tmng_pregame_trigger", "0", "If set to 1, perform a random scramble after the waiting for players round ends. (this will force spectators to a team)", FCVAR_PLUGIN, true, 0.0, true, 1.0);
+	g_hRandomSwaps	= CreateConVar("tf2tmng_random_percentage", "50", "Percentage of each team to swap during a random scramble", FCVAR_PLUGIN, true, 10.0, true, 100.0);
 	
+	g_hScrImm_Admin = CreateConVar("tf2tmng_scr_admin_immune", "0", "If set to 1, admins will be immune to scramble", FCVAR_PLUGIN, true, 0.0, true, 1.0);
+	g_hScrImm_AdmFlags = CreateConVar("tf2tmng_scr_admin_flags", "ab", "Admin flag chars for who will be immune to scramble", FCVAR_PLUGIN);
+	g_hScrImm_Engy	= CreateConVar("tf2tmng_scr_engy_immune", "0", "How engineer immunity is decided.\n0 no immunity.\n1 all enginners immune\n2 engineers with any buildings are immune.\n3 engineers with a sentry are immune.\4 engineers with teleporters are immune", FCVAR_PLUGIN, true, 0.0, true, 4.0);
+	g_hScrImm_Medic	= CreateConVar("tf2tmng_scr_medic_immune", "0", "How medic immunity is decided.\n0 no immunity.\n1 all medics immune.\n2 medics with built-up charges are immune", FCVAR_PLUGIN, true, 0.0, true, 2.0);
+	MyLogMessage("Successfully created scramble ConVars");
 }
 
 LoadScrambleSettings()
