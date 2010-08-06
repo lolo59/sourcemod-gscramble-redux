@@ -22,13 +22,13 @@ along with this plugin.  If not, see <http://www.gnu.org/licenses/>.
 *************************************************************************
 *************************************************************************
 File Information
-$Id: gscramble.sp 6 2010-08-06 04:55:50Z brutalgoergectf $
-$Author: brutalgoergectf $Author$ $
-$Revision: 6 $
-$Date: 2010-08-05 22:55:50 -0600 (Thu, 05 Aug 2010) $
-$LastChangedBy: brutalgoergectf $
-$LastChangedDate: 2010-08-05 22:55:50 -0600 (Thu, 05 Aug 2010) $
-$URL: https://tf2tmng.googlecode.com/svn/trunk/addons/sourcemod/scripting/gscramble.sp $
+$Id$
+$Author$Author$ $
+$Revision$
+$Date$
+$LastChangedBy$
+$LastChangedDate$
+$URL$
 $Copyright: (c) TF2 Team Manager 2010-2011$
 *************************************************************************
 *************************************************************************
@@ -40,7 +40,7 @@ $Copyright: (c) TF2 Team Manager 2010-2011$
 #include <tf2>
 #include <tf2_stocks>
 #include <clientprefs>
-#define VERSION "$Revision: 6 $"
+#define VERSION "$Revision$"
 
 #undef REQUIRE_PLUGIN
 #include <adminmenu>
