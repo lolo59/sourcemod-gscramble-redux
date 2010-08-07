@@ -88,7 +88,8 @@ enum e_clientSettings
 	bool:TeamChangeBlocked,
 	iFrags,
 	iDeaths,
-	iHealing
+	iHealing,
+	bool:bHasFlag
 };
 
 enum e_TeamData
@@ -98,7 +99,8 @@ enum e_TeamData
 	*/
 	iFrags,
 	iDeaths,
-	bool:bGoal
+	bool:bGoal,
+	iWinStreak
 };
 
 enum e_Names
@@ -147,6 +149,28 @@ public OnPluginStart()
 	LoadTranslations("tf2tmng.phrases");
 	g_bLoading = false;
 }
+
+stock HookEvents()
+{
+	MyLogMessage("Hooking Events");
+	HookEvent("player_death", Event_PlayerDeath, EventHookMode_Pre);
+	HookEvent("player_team", Event_PlayerTeam, EventHookMode_Pre);
+	HookEvent("teamplay_round_start", Event_RoundStart, EventHookMode_PostNoCopy);
+	HookEvent("teamplay_setup_finished", Event_SetupFinished, EventHookMode_PostNoCopy);
+	HookEvent("teamplay_round_win", Event_RoundWin, EventHookMode_Post);
+	HookEvent("teamplay_round_stalemate", Event_SuddenDeath, EventHookMode_PostNoCopy);
+	HookEvent("teamplay_point_captured", Event_PointCaptured, EventHookMode_Post);
+	HookEvent("medic_death", Event_MedicDeath, EventHookMode_Post);
+	HookEvent("player_chargedeployed", Event_UberDeploy, EventHookMode_Post);
+	HookEvent("player_sapped_object", Event_Sapper, EventHookMode_Post);
+	HookEvent("player_escort_score", Event_EscortScore, EventHookMode_Post);	
+	HookEvent("teamplay_timer_time_added", Event_TimeAdded, EventHookMode_Post);
+	HookEvent("object_destroyed", Event_ObjectDestroyed, EventHookMode_Post);
+	HookUserMessage(GetUserMessageId("TextMsg"), Event_MessageTest, false);
+}
+
+stock RegCommands()
+{
 
 stock CheckGameMod()
 {

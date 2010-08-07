@@ -42,7 +42,6 @@ new Handle:g_hForceTeamScramble;
 new Handle:g_hRememberDisconnects;
 new Handle:g_hMenuIntegration;
 
-
 new bool:g_bLoading;
 
 stock CreateConVars()
