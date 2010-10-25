@@ -68,10 +68,48 @@ stock CreateConVars()
 	g_hTeamDifference = CreateConVar("tf2tmng_ab_team_difference", "2", "If a team has this many more players than the other team,then consider the teams un-even.", FCVAR_PLUGIN, true, 2.0, false);
 	g_hSkillBalance = CreateConVar("tf2tmng_ab_skill", "0", "If enabled, will take into consideration both teams average skill and attempt to even this up", FCVAR_PLUGIN, true, 0.0, false, 1.0);
 	g_hSkillOverride= CreateConVar("tf2tmng_ab_skill_override", "180", "Time, in seconds, in which if the plugin cannot fand a player to balance in skill mode where this sheck is ignored", FCVAR_PLUGIN, true, 10.0, false);
-	g_hAbImmAdmin	= CreateConVar("tf2tmn_ab_admin_immunity", "1", "Enables admin immunity for auto balance", FCVAR_PLUGIN, true, 0.0, true, 1.0);
+	g_hAbImmAdmin	= CreateConVar("tf2tmn_ab_admin_immunity", "1", "Enables admin immunity for auto balance. 0- no admin immunity, 1- admins immune, 2- admin priority", FCVAR_PLUGIN, true, 0.0, true, 2.0);
 	g_hAbImmClass	= CreateConVar("tf2tmng_ab_class", "0", "Enables class-based immunity", FCVAR_PLUGIN, true, 0.0, true, 1.0);
 	g_hAbForceTeam	= CreateConVar("tf2tmng_ab_forceteam", "1", "Force players to remain ont heir team after being swapped. Will block changes to spectator and the other team", FCVAR_PLUGIN, true, 0.0, true, 1.0);
-
+	/**
+	Priority cvars so admins can decide how much priority gets added for certain classes, events, and other circumstances
+	*/
+	g_hAbPriority = CreateConVar("tf2tmng_ab_priority", "0", "Consider a player's priority when deciding who to balance", FCVAR_PLUGIN, true, 0.0, true, 1.0);
+	g_hAbPrio_Medics	= CreateConVar("tf2tmng_ab_prio_medic", "5", "Amount of priority to put on medics from -10 to 10; -10.0 being likely to be swapped, 10 being not likely to be swapped", FCVAR_PLUGIN, true, -10.0, true, 10.0);
+	g_hAbPrio_Engineer = CreateConVar("tf2tmng_ab_prio_engineer", "5", "Amount of priority to put on engineers", FCVAR_PLUGIN, true, -10.0, true, 10.0);
+	g_hAbPrio_Spy		= CreateConVar("tf2tmng_ab_prio_spy", "5", "Amount of priority to put on engineers", FCVAR_PLUGIN, true, -10.0, true, 10.0);
+	g_hAbPrio_Scount	= CreateConVar("tf2tmng_ab_prio_scout", "5", "Amount of priority to put on engineers", FCVAR_PLUGIN, true, -10.0, true, 10.0);
+	g_hAbPrio_Demo		= CreateConVar("tf2tmng_ab_prio_demo", "5", "Amount of priority to put on engineers", FCVAR_PLUGIN, true, -10.0, true, 10.0);
+	g_hAbPrio_Soldier	= CreateConVar("tf2tmng_ab_prio_soldier", "5", "Amount of priority to put on engineers", FCVAR_PLUGIN, true, -10.0, true, 10.0); 
+	g_hAbPrio_Heavy		= CreateConVar("tf2tmng_ab_prio_heavy", "5", "Amount of priority to put on engineers", FCVAR_PLUGIN, true, -10.0, true, 10.0);
+	g_hAbPrio_Sniper	= CreateConVar("tf2tmng_ab_prio_sniper", "5", "Amount of priority to put on engineers", FCVAR_PLUGIN, true, -10.0, true, 10.0); 
+	g_hAbPrio_Pyro 		= CreateConVar("tf2tmng_ab_prio_pyro", "5", "Amount of priority to put on engineers", FCVAR_PLUGIN, true, -10.0, true, 10.0);
+	g_hAbPrio_OnlyClass = CreateConVar("tf2tmng_ab_prio_loneclass_add", "5", "Amount of priority to add to a class if there is just 1", FCVAR_PLUGIN, true, -10.0, true, 10.0);
+	g_hAbPrio_Admin		= CreateConVar("tf2tmng_ab_prio_admin", "10", "Amount of priority to add to an admin", FCVAR_PLUGIN, true, -10.0, true, 10.0);
+	g_hAbPrio_NewPlayers = CreateConVar("tf2Tmng_ab_prio_new", "-5", "Amount of priority to put on a recent connections", FCVAR_PLUGIN, true, -10.0, true, 10.0);
+	g_hAbPrio_NewConnectTime = CreateConVar("tf2tmng_ab_prio_newtime", "180", "If a client has less than this many seconds in connection time, consider them a newly connected player", FCVAR_PLUGIN, true, 0.0, false);
+	g_hAbPrio_OldPlayers = CreateConVar("tf2tmng_ab_prio_old", "5", "Amount of priority to put on a player who has been playing a long time", FCVAR_PLUGIN, true, -10.0, true, 10.0);
+	g_hAbPrio_OldConnectTime = CreateConVar("tf2tmng_ab_prio_oldtime", "10", "If a client has this many minutes of more of connection time, then consider them an old player", FCVAR_PLUGIN, true, 0.0, false);
+	/**
+	Game events to consider for priority
+	*/
+	g_hAbPrio_Events		= CreateConVar("tf2tmng_ab_prio_enable_events", "1", "Enable prioirty event tracking", FCVAR_PLUGIN, true, 0.0, true, 1.0);
+	g_hAbPrio_FlagTouch
+	g_hAbPrio_FlagCapture
+	g_hAbPrio_FlagKill
+	
+	g_hAbPrio_CpCapture
+	g_hAbPrio_CpDefend
+	
+	g_hAbPrio_PlCapture
+	g_hAbPrio_PlDefend
+	g_hAbPrio_PlPush
+	
+	g_hAbPrio_DeployCharge
+	g_hAbPrio_MedicAssist
+	g_hAbPrio_KillBuilding
+	g_hAbPrio_SapBuilding
+	
 	/**
 	SCRAMBLE VARS
 	*/
