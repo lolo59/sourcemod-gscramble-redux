@@ -47,7 +47,40 @@ new Handle:g_hAutoBalance,
 	Handle:g_hSkillOVerride,
 	Handle:g_hAbImmAdmin,
 	Handle:g_hAbImmClass,
-	Handle:g_hAbForceTeam;
+	Handle:g_hAbForceTeam,
+	Handle:g_hAbPriority,
+	Handle:g_hAbPrioMode,
+	Handle:g_hAbPrio_Medics,
+	Handle:g_hAbPrio_Engineer,
+	Handle:g_hAbPrio_Spy,
+	Handle:g_hAbPrio_Scount,
+	Handle:g_hAbPrio_Demo,
+	Handle:g_hAbPrio_Soldier,
+	Handle:g_hAbPrio_Heavy,
+	Handle:g_hAbPrio_Sniper,
+	Handle:g_hAbPrio_Pyro,
+	Handle:g_hAbPrio_OnlyClass,
+	Handle:g_hAbPrio_Admin,
+	Handle:g_hAbPrio_NewPlayers,
+	Handle:g_hAbPrio_NewConnectTime,
+	Handle:g_hAbPrio_OldPlayers,
+	Handle:g_hAbPrio_OldConnectTime,
+	Handle:g_hAbPrio_Events,
+	Handle:g_hAbPrio_EventsTimeLimit,
+	Handle:g_hAbPrio_FlagTouch,
+	Handle:g_hAbPrio_FlagCapture,
+	Handle:g_hAbPrio_FlagKill,
+	Handle:g_hAbPrio_CpCapture,
+	Handle:g_hAbPrio_CpDefend,
+	Handle:g_hAbPrio_PlCapture,
+	Handle:g_hAbPrio_PlDefend,
+	Handle:g_hAbPrio_PlPush,
+	Handle:g_hAbPrio_DeployCharge,
+	Handle:g_hAbPrio_MedicAssist,
+	Handle:g_hAbPrio_KillBuilding,
+	Handle:g_hAbPrio_SapBuilding,
+	Handle:g_hAbPrio_KdRatio;
+	
 
 new bool:g_bLoading;
 
@@ -75,6 +108,8 @@ stock CreateConVars()
 	Priority cvars so admins can decide how much priority gets added for certain classes, events, and other circumstances
 	*/
 	g_hAbPriority = CreateConVar("tf2tmng_ab_priority", "0", "Consider a player's priority when deciding who to balance", FCVAR_PLUGIN, true, 0.0, true, 1.0);
+	g_hAbPrioMode	= CreateConVar("tf2tmng_ab_priomode", "0", "Priority mode. 0 sonly swap people with priority <= 0. 1 only swap players with a higer priority than the unbalanced team's average. 2 only swap players with a lower priority than the unbalance'd team's average", FCVAR_PLUGIN, true, 0.0, true, 2);
+	
 	g_hAbPrio_Medics	= CreateConVar("tf2tmng_ab_prio_medic", "5", "Amount of priority to put on medics from -10 to 10; -10.0 being likely to be swapped, 10 being not likely to be swapped", FCVAR_PLUGIN, true, -10.0, true, 10.0);
 	g_hAbPrio_Engineer = CreateConVar("tf2tmng_ab_prio_engineer", "5", "Amount of priority to put on engineers", FCVAR_PLUGIN, true, -10.0, true, 10.0);
 	g_hAbPrio_Spy		= CreateConVar("tf2tmng_ab_prio_spy", "5", "Amount of priority to put on engineers", FCVAR_PLUGIN, true, -10.0, true, 10.0);
@@ -94,21 +129,24 @@ stock CreateConVars()
 	Game events to consider for priority
 	*/
 	g_hAbPrio_Events		= CreateConVar("tf2tmng_ab_prio_enable_events", "1", "Enable prioirty event tracking", FCVAR_PLUGIN, true, 0.0, true, 1.0);
-	g_hAbPrio_FlagTouch
-	g_hAbPrio_FlagCapture
-	g_hAbPrio_FlagKill
+	g_hAbPrio_EventsTimeLimit = CreateConVar("tf2tmng_ab_prio_event_time", "60", "Time in seconds in which the event priorities remain valid after a player achieves one", FCVAR_PLUGIN, true, 0.0, false);
+	g_hAbPrio_FlagTouch	= CreateConVar("tf2tmng_ab_prio_flagtouch", "5", "Amount of prioritty to put on someone touching the CTF Flag", FCVAR_PLUGIN, true, -10.0, true, 10.0);
+	g_hAbPrio_FlagCapture	= CreateConVar("tf2tmng_ab_prio_flagcapture", "6", "Amount of priority to put on someone capturing the CTF Flag", FCVAR_PLUGIN, true, -10.0, true, 10.0);
+	g_hAbPrio_FlagKill		= CreateConVar("tf2tmng_ab_prio_flagkill", "5", "Amount of priority to put on someone who kills the flag carrier", FCVAR_PLUGIN, true, -10.0, true, 10.0);
 	
-	g_hAbPrio_CpCapture
-	g_hAbPrio_CpDefend
+	g_hAbPrio_CpCapture	= CreateConVar("tf2tmng_ab_prio_cpcapture", "5", "Amount of priority to put on someone who captures a control point", FCVAR_PLUGIN, true, -10.0, true, 10.0);
+	g_hAbPrio_CpDefend		= CreateConVar("tf2tmng_ab_prio_cpdefend", "5", "Amount of priority to put on someone who defends a control point", FCVAR_PLUGIN, true, -10.0, true, 10.0);
 	
-	g_hAbPrio_PlCapture
-	g_hAbPrio_PlDefend
-	g_hAbPrio_PlPush
+	g_hAbPrio_PlCapture	= CreateConVar("tf2tmng_ab_prio_plcapture", "5", "Amount of priority to put on someone who captures a payload control point", FCVAR_PLUGIN, true, -10.0, true, 10.0);
+	g_hAbPrio_PlDefend		= CreateConVar("tf2tmng_ab_prio_pldefend", "5", "Amount of priority to put on someone who defends the payload cart", FCVAR_PLUGIN, true, -10.0, true, 10.0);
+	g_hAbPrio_PlPush		= CreateConVar("tf2tmng_ab_prio_plpush", "2", "Amount of priority to put on someone who triggers the cart progress event", FCVAR_PLUGIN, true, -10.0, true, 10.0);
 	
-	g_hAbPrio_DeployCharge
-	g_hAbPrio_MedicAssist
-	g_hAbPrio_KillBuilding
-	g_hAbPrio_SapBuilding
+	g_hAbPrio_DeployCharge = CreateConVar("tf2tmng_ab_prio_deploy", "5", "Amount of priority to put on a medic who depoys charge", FCVAR_PLUGIN, true, -10.0, true, 10.0);
+	g_hAbPrio_MedicAssist = 	CreateConVar("tf2tmng_ab_prio_medicassist", "1", "Amount of priority to put on medic kill assists", FCVAR_PLUGIN, true, -10.0, true, 10.0);
+	g_hAbPrio_KillBuilding = CreateConVar("tf2tmng_ab_prio_kill_building", "5", "Amount of priority to put on someone killing an engineer building", FCVAR_PLUGIN, true, -10.0, true, 10.0);
+	g_hAbPrio_SapBuilding 	= CreateConVar("tf2tmng_ab_prio_sap_building", "2", "Amount of priority to put on someone sapping an engineer building", FCVAR_PLUGIN, true, -10.0, true, 10.0);
+	
+	g_hAbPrio_KdRatio		= CreateConVar("tf2tmng_ab_prio_kdeath", "1", "Add a player's rounded kill-death ratio to their priority", FCVAR_PLUGIN, true, 0.0, true, 1.0);
 	
 	/**
 	SCRAMBLE VARS
