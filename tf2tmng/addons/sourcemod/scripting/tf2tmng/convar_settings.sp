@@ -101,7 +101,8 @@ stock CreateConVars()
 	g_hTeamDifference = CreateConVar("tf2tmng_ab_team_difference", "2", "If a team has this many more players than the other team,then consider the teams un-even.", FCVAR_PLUGIN, true, 2.0, false);
 	g_hSkillBalance = CreateConVar("tf2tmng_ab_skill", "0", "If enabled, will take into consideration both teams average skill and attempt to even this up", FCVAR_PLUGIN, true, 0.0, false, 1.0);
 	g_hSkillOverride= CreateConVar("tf2tmng_ab_skill_override", "180", "Time, in seconds, in which if the plugin cannot fand a player to balance in skill mode where this sheck is ignored", FCVAR_PLUGIN, true, 10.0, false);
-	g_hAbImmAdmin	= CreateConVar("tf2tmn_ab_admin_immunity", "1", "Enables admin immunity for auto balance. 0- no admin immunity, 1- admins immune, 2- admin priority", FCVAR_PLUGIN, true, 0.0, true, 2.0);
+	g_hAbAdminImmune	= CreateConVar("tf2tmng_ab_admin_immunity", "1", "Enables admin immunity for auto balance. 0- no admin immunity, 1- admins immune, 2- admin priority", FCVAR_PLUGIN, true, 0.0, true, 2.0);
+	g_hAbAdminFlags	= CreateConVar("tf2tmng_ab_admin_flags", "a", "Flag(s) for auto-balance admin immunity", FCVAR_PLUGIN);
 	g_hAbImmClass	= CreateConVar("tf2tmng_ab_class", "0", "Enables class-based immunity", FCVAR_PLUGIN, true, 0.0, true, 1.0);
 	g_hAbForceTeam	= CreateConVar("tf2tmng_ab_forceteam", "1", "Force players to remain ont heir team after being swapped. Will block changes to spectator and the other team", FCVAR_PLUGIN, true, 0.0, true, 1.0);
 	/**
@@ -154,7 +155,22 @@ stock CreateConVars()
 	g_hAutoScramble = CreateConVar("tf2tmng_as_enable", "0", "Enable TF2 Team Manager's Auto-Scramble feature", FCVAR_PLUGIN, true, 0.0, true, 1.0);
 	g_hAsRoundTrigger = CreateConVar("tf2tmng_as_round_trigger", "0", "Scrable the teams after this many rounds", FCVAR_PLUGIN, true, 0.0, false);
 	g_hAsWinTrigger = CreateConVar("tf2tmng_as_win_trigger", "0", "Scramble the teams after a team wins this many rounds in a row", FCVAR_PLUGIN, true, 0.0, false);
-	g_hAsFullRoundsOnly= CreateConVar("tf2tmng_as_fullround_only", "1", "Do not count a mini-round as a full round", FCVAR_PLUGIN, true, 0.0, true, 1.0);
+	g_hAsFullRoundOnly = CreateConVar("tf2tmng_as_fullround_only", "1", "Do not count a mini-round as a full round", FCVAR_PLUGIN, true, 0.0, true, 1.0);
+	
+	g_hAsRapeTrigger = CreateConVar("tf2tmng_as_rape_trigger", "0", "Trigger a scramble when a team rapes another team", FCVAR_PLUGIN, true, 0.0, true, 1.0);
+	g_hAsRapeThreshold = CreateConVar("tf2tmng_as_rape_threshold", "15", "If the rape-score surpasses this, then trigger an auto-scramble", FCVAR_PLUGIN, true, 0.0, true, 50.0);
+	g_hAsRapeDominations = CreateConVar("tf2tmng_as_rape_dominations", "5", "If a team has this many more dominations than the other team, add the domination rape score", FCVAR_PLUGIN, true, 0.0, false);
+	g_hAsRapeDominationScore = CreateConVar("tf2tmng_as_rape_score", "5", "Score to add for the domination rape-score", FCVAR_PLUGIN, true, 0.0, true, 50.0);
+	g_hAsRapeNoObjective = CreateConVar("tf2tmng_as_rape_objective", "1", "Add the rape objective score if a losing team never achieves an objective during a round", FCVAR_PLUGIN, true, 0.0, true, 1.0);
+	g_hAsRapeNoObjectiveScore = CreateConVar("tf2tmng_as_rape_objective_score", "5", "Score to add for the rape objective trigger", FCVAR_PLUGIN, true, 0.0, true, 50.0);
+	g_hAsRapeAvgScoreDiff = CreateConVar("tf2tmng_as_rape_average_score_difference", "25", "If the winning team's average score is greater than this, add this trigger's rape score", FCVAR_PLUGIN, true, 0.0, false);
+	g_hAsRapeAvgScoreDiffScore = CreateConVar("tf2tmng_as_rape_average_score_diff_score", "5", "Score to add for the average score difference trigger", FCVAR_PLUGIN, true, 0.0, true, 50.0);
+	g_hAsRapeTimeLimit = CreateConVar("tf2tmng_as_rape_time_limit", "60", "If a team wins a round in this amount of time (seconds) or less, add this trigger's rape score", FCVAR_PLUGIN, true, 0.0, false);
+	g_hAsRapeTimeLimitScore = CreateConVar("tf2mng_as_rape_time_limit_score", "5", "Score to add for the time limit trigger", FCVAR_PLUGIN, true, 0.0, true, 50.0);
+	
+	g_hAsAdminImmunue = CreateConVar("tf2mng_as_admin_immune", "0", "Toggles scramble admin immunity", FCVAR_PLUGIN, true, 0.0, true, 1.0);
+	g_hAsAdminFlags = CreateConVar("tf2tmng_as_admin_flags", "a", "Flag, or flags to consider for scramble admin immunity", FCVAR_PLUGIN);
+	
 	g_hAsSortMode	= CreateConVar("tf2tmng_as_sort_mode", "0", "0: random, 1: skill, 2: top-player exchange, 3: class sorting"), FCVAR_PLUGIN, true, 0.0, true 2.0);
 	g_hAsRandomPercent = CreateConVar("tf2tmng_as_random_percent", "50", "Percentage of each team to randomly select for swapping"), FCVAR_PLUGIN, true, 0.0, true, 100);
 	g_hAsShowStats	= CreateConVar("tf2tmng_as_show_stats", "1", "Print To Chat the scramble statistics"), FCVAR_PLUGIN, true, 0.0, true, 100);

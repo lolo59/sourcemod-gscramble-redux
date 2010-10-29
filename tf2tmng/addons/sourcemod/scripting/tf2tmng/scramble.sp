@@ -34,23 +34,6 @@ $Copyright: (c) TF2 Team Manager 2010-2011$
 *************************************************************************
 */
 
-new Handle:g_hAutoScramble 	= INVALID_HANDLE;
-new Handle:g_hSortMode		= INVALID_HANDLE;
-new Handle:g_hDomDiff			= INVALID_HANDLE;
-new Handle:g_hTimeLimit		= INVALID_HANDLE;
-new Handle:g_hTimeRatio		= INVALID_HANDLE;
-new Handle:g_hTimeMinFrags	= INVALID_HANDLE;
-new Handle:g_hRageLimit		= INVALID_HANDLE;
-new Handle:g_hGoals			= INVALID_HANDLE;
-new Handle:g_hSkill			= INVALID_HANDLE;
-new Handle:g_hAction			= INVALID_HANDLE;
-new Handle:g_hPreGame			= INVALID_HANDLE;
-new Handle:g_hRandomSwaps	= INVALID_HANDLE;
-
-new Handle:g_hScrImm_Admin	= INVALID_HANDLE;
-new Handle:g_hScrImm_AdmFlags = INVALID_HANDLE;
-new Handle:g_hScrImm_Engy	= INVALID_HANDLE;
-new Handle:g_hScrImm_Medic	= INVALID_HANDLE;
 
 enum e_ScrambleReasons
 {
@@ -78,28 +61,6 @@ enum e_SortModes
 	Sort_ChooseRandom,
 };
 
-CreateScrambleConVars()
-{
-	g_hAutoScramble = CreateConVar("tf2tmng_auto_scramble", "0", "If set to 1, auto-scramble checks from the auto-scramble convars will take place", FCVAR_PLUGIN, true, 0.0, true, 1.0);
-	g_hSortMode		= CreateConVar("tf2tmng_default_sortmode", "0", "Choose the default sort mode.\n0 is ranom.\n1 is by a computation of skill.\n3 is player kill-ratios.\4 is player scores as they are on the score board.\5 will swap the top players on each team as determined by the topswap var.\6 Sorts teams by player classes.\n7 will randomly choose a mode", FCVAR_PLUGIN, true, 0.0, true, 7.0);
-	g_hDomDiff		= CreateConVar("tf2tmng_domination_trigger", "10", "Auto-scramble triggers when a team has this many more dominations than the other team.", FCVAR_PLUGIN, true, 0.0, false);
-	g_hTimeLimit		= CreateConVar("tf2tmng_time_tigger", "140", "If a team wins within this threshold, trigger a scramble. Value is in seconds", FCVAR_PLUGIN, true, 0.0, false);
-	g_hTimeRatio		= CreateConVar("tf2tmng_time_ratio", "1.55", "Kill ratio of the winning team vs the smaller team for the time trigger to be valid", FCVAR_PLUGIN, true, 0.0, false);
-	g_hTimeMinFrags	= CreateConVar("tf2tmng_time_min_frags", "30", "Minimum amount of frags before a time trigger is valid", FCVAR_PLUGIN, true, 0.0, false);
-	g_hRageLimit		= CreateConVar("tf2tmng_imbalance_scramble", "4", "If the round ends with the teams imbalanced by this many players, trigger", FCVAR_PLUGIN, true, 0.0, true, 64);
-	g_hGoals			= CreateConVar("tf2tmng_goal_trigger", "0", "If a team never wins a goal (flag cap on CTF, CP on KOTH or push maps, or cp on PL race) then trigger", FCVAR_PLUGIN, true, 0.0, true, 1.0);
-	g_hSkill			= CreateConVar("tf2tmng_skill_difference", "0", "Computes teams' skills with avg score, avg Kill ratio, and AVG connection time, then compares them.", FCVAR_PLUGIN, true, 0.0, false);
-	g_hAction			= CreateConVar("tf2tmng_auto_action", "0", "Action to take if there is a trigger. 0 to scramble, 1 to start a vote", FCVAR_PLUGIN, true, 0.0, true, 1.0);
-	g_hTriggers		= CreateConVar("tf2tmng_multiple_triggers", "1", "Number if successive triggers before an action is taken", FCVAR_PLUGIN, true, 1.0, false);
-	g_hPreGame		= CreateConVar("tf2tmng_pregame_trigger", "0", "If set to 1, perform a random scramble after the waiting for players round ends. (this will force spectators to a team)", FCVAR_PLUGIN, true, 0.0, true, 1.0);
-	g_hRandomSwaps	= CreateConVar("tf2tmng_random_percentage", "50", "Percentage of each team to swap during a random scramble", FCVAR_PLUGIN, true, 10.0, true, 100.0);
-	
-	g_hScrImm_Admin = CreateConVar("tf2tmng_scr_admin_immune", "0", "If set to 1, admins will be immune to scramble", FCVAR_PLUGIN, true, 0.0, true, 1.0);
-	g_hScrImm_AdmFlags = CreateConVar("tf2tmng_scr_admin_flags", "ab", "Admin flag chars for who will be immune to scramble", FCVAR_PLUGIN);
-	g_hScrImm_Engy	= CreateConVar("tf2tmng_scr_engy_immune", "0", "How engineer immunity is decided.\n0 no immunity.\n1 all enginners immune\n2 engineers with any buildings are immune.\n3 engineers with a sentry are immune.\4 engineers with teleporters are immune", FCVAR_PLUGIN, true, 0.0, true, 4.0);
-	g_hScrImm_Medic	= CreateConVar("tf2tmng_scr_medic_immune", "0", "How medic immunity is decided.\n0 no immunity.\n1 all medics immune.\n2 medics with built-up charges are immune", FCVAR_PLUGIN, true, 0.0, true, 2.0);
-	MyLogMessage("Successfully created scramble ConVars");
-}
 
 LoadScrambleSettings()
 {

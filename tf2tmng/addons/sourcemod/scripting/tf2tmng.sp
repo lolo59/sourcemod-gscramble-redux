@@ -56,23 +56,6 @@ $Copyright: (c) TF2 Team Manager 2010-2011$
 #define RED 		2
 #define BLUE		3
 
-//immunity
-#define IM_ADMIN 				(1<<0)
-#define IM_ENGINEER_DSP 	(1<<1)
-#define IM_ENGINEER_SENT	(1<<2)
-#define IM_ENGINEER_TELE	(1<<3)
-#define IM_ACTION_CP_CAP	(1<<4)
-#define IM_ACTION_CP_DEF	(1<<5)
-#define IM_ACTION_FLAG_TOUCH (1<<6)
-#define IM_ACTION_FLAG_CAP	(1<<7)
-#define IM_ACTION_FLAG_KILL (1<<8)
-#define IM_ACTION_PL_PUSH	(1<<9)
-#define IM_ACTION_SENT_KILL	(1<<10)
-#define IM_ACTION_SENT_SAP	(1<<11)
-#define IM_ACTION_TELE_KILL (1<<12)
-#define IM_ACTION_TELE_SAP	(1<<13)
-#define IM_ACTION_DSP_SAP	(1<<14)
-#define IM_ACTION_DSP_KILL	(1<<15)
 
 #include "tf2tmng/scramble.sp"			// has all the functions that deal with the scramble portion of the plugin
 #include "tf2tmng/convar_settings.sp"	// has all the functions that create and copy convar settings into global values
