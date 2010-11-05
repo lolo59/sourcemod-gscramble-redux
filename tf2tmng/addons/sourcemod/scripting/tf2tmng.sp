@@ -44,8 +44,10 @@ $Copyright: (c) TF2 Team Manager 2010-2011$
 
 #undef REQUIRE_PLUGIN
 #include <adminmenu>
+#define REQUIRE_PLUGIN
 #undef REQUIRE_EXTENSIONS
 #include <clientprefs>
+#define REQUIRE_EXTENSIONS
 
 
 #define AUTOBALANCE
@@ -154,6 +156,14 @@ stock HookEvents()
 
 stock RegCommands()
 {
+	RegAdminCmd("sm_scramblevote", Cmd_ScrambleVote, ADMFLAG_VOTE, "Command to start a scramble vote");
+	RegAdminCmd("sm_startscramble", Cmd_StartScramble, ADMFLAG_GENERIC, "Command to start a scramble");
+	RegAdminCmd("sm_forcebalance", Cmd_Forcebalance, ADMFLAG_GENERIC, "command to force a balance");
+	RegAdminCmd("sm_cancelscramble", Cmd_CancelScramble, ADMFLAG_GENERIC, "Command to cancel a pending scramble");
+	RegAdminCmd("sm_undoscramble", Cmd_UndoScramble, ADMFLAG_GENERIC, "Command to undo a scramble");
+	RegAdminCmd("sm_block_teamchange", Cmd_BlockTeamChange, ADMFLAG_BAN, "Command to force players to remain on their teams");
+
+}
 
 stock CheckGameMod()
 {

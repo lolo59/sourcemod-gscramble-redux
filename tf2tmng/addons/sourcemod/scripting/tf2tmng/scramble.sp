@@ -37,17 +37,7 @@ $Copyright: (c) TF2 Team Manager 2010-2011$
 
 enum e_ScrambleReasons
 {
-	Reason_TimeLimit,
-	Reason_FragDifference,
-	Reason_RatioDifference,
-	Reason_DominationDifference,
-	Reason_TeamImbalance,
-	Reason_SkillDifference,
-	Reason_Goal,
-	Reason_RoundTrigger,
-	Reason_Vote,
-	Reason_Admin,
-	Reason_PreGame
+
 };
 
 enum e_SortModes
