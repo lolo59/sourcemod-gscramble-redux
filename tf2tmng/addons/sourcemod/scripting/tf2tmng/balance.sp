@@ -23,13 +23,13 @@ along with this plugin.  If not, see <http://www.gnu.org/licenses/>.
 *************************************************************************
 *************************************************************************
 File Information
-$Id: convar_settings.sp 19 2010-11-05 19:24:09Z brutalgoergectf $
-$Author: brutalgoergectf $Author$ $
-$Revision: 19 $
-$Date: 2010-11-05 13:24:09 -0600 (Fri, 05 Nov 2010) $
-$LastChangedBy: brutalgoergectf $
-$LastChangedDate: 2010-11-05 13:24:09 -0600 (Fri, 05 Nov 2010) $
-$URL: https://tf2tmng.googlecode.com/svn/trunk/tf2tmng/addons/sourcemod/scripting/tf2tmng/convar_settings.sp $
+$Id$
+$Author$Author$ $
+$Revision$
+$Date$
+$LastChangedBy$
+$LastChangedDate$
+$URL$
 $Copyright: (c) TF2 Team Manager 2010-2011$
 *************************************************************************
 *************************************************************************
