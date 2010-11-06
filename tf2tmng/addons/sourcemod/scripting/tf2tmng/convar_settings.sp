@@ -60,7 +60,7 @@ new Handle:g_hAutoBalance,
 	Handle:g_hAbPrio_Medics,
 	Handle:g_hAbPrio_Engineer,
 	Handle:g_hAbPrio_Spy,
-	Handle:g_hAbPrio_Scount,
+	Handle:g_hAbPrio_Scout,
 	Handle:g_hAbPrio_Demo,
 	Handle:g_hAbPrio_Soldier,
 	Handle:g_hAbPrio_Heavy,
@@ -188,7 +188,7 @@ CreateConVars()
 						FCVAR_PLUGIN, true, -10.0, true, 10.0);
 	g_hAbPrio_Engineer = CreateConVar("tf2tmng_ab_prio_engineer", "5", "Amount of priority to put on engineers", FCVAR_PLUGIN, true, -10.0, true, 10.0);
 	g_hAbPrio_Spy		= CreateConVar("tf2tmng_ab_prio_spy", "5", "Amount of priority to put on engineers", FCVAR_PLUGIN, true, -10.0, true, 10.0);
-	g_hAbPrio_Scount	= CreateConVar("tf2tmng_ab_prio_scout", "5", "Amount of priority to put on engineers", FCVAR_PLUGIN, true, -10.0, true, 10.0);
+	g_hAbPrio_Scout	= CreateConVar("tf2tmng_ab_prio_scout", "5", "Amount of priority to put on engineers", FCVAR_PLUGIN, true, -10.0, true, 10.0);
 	g_hAbPrio_Demo		= CreateConVar("tf2tmng_ab_prio_demo", "5", "Amount of priority to put on engineers", FCVAR_PLUGIN, true, -10.0, true, 10.0);
 	g_hAbPrio_Soldier	= CreateConVar("tf2tmng_ab_prio_soldier", "5", "Amount of priority to put on engineers", FCVAR_PLUGIN, true, -10.0, true, 10.0); 
 	g_hAbPrio_Heavy		= CreateConVar("tf2tmng_ab_prio_heavy", "5", "Amount of priority to put on engineers", FCVAR_PLUGIN, true, -10.0, true, 10.0);
