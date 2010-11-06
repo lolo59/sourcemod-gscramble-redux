@@ -37,7 +37,9 @@ $Copyright: (c) TF2 Team Manager 2010-2011$
 
 enum e_ScrambleReasons
 {
-
+	Rape,
+	Vote,
+	Admin,
 };
 
 enum e_SortModes

@@ -60,6 +60,7 @@ $Copyright: (c) TF2 Team Manager 2010-2011$
 
 
 #include "tf2tmng/scramble.sp"			// has all the functions that deal with the scramble portion of the plugin
+#include "tf2tmng/balance.sp"			// auto-balance functions
 #include "tf2tmng/convar_settings.sp"	// has all the functions that create and copy convar settings into global values
 #include "tf2tmng/round_timer.sp"		// the code that keeps track of the round time remaining... since valve won't simply read from the HUD timer
 #include "tf2tmng/menus.sp"				// all the stuff dealing with menus and their callbacks
@@ -120,6 +121,7 @@ public Plugin:myinfo =
 
 public OnPluginStart()
 {
+	
 	g_bLoading = true;
 	CheckGameMod();
 	CheckClientPrefs();
@@ -210,3 +212,29 @@ stock MyLogMessage(const String:message[])
 		LogMessage("%s", message);
 	}
 }
+
+/**
+	events
+*/
+public Action:Event_PlayerDeath(Handle:event, const String:name[], bool:dontBroadcast)
+{
+		
+	if (g_RoundState != normal || GetEventInt(event, "death_flags") & 32)
+	{
+		return Plugin_Continue;
+	}
+		
+	new iKiller = GetClientOfUserId(GetEventInt(event, "attacker"));
+		
+	new	iVictim = GetClientOfUserId(GetEventInt(event, "userid"));
+	g_aPlayers[iKiller][iFrags]++;
+	g_aPlayers[iVictim][iDeaths]++;
+	CheckForBalance(iVictim);		
+	if (!iKiller || iKiller == iVictim || iKiller > MaxClients)
+	{
+		return Plugin_Continue;
+	}		
+	GetClientTeam(iKiller) == TEAM_RED ? (g_aTeams[iRedFrags]++) : (g_aTeams[iBluFrags]++);	
+	return Plugin_Continue;
+}
+	
