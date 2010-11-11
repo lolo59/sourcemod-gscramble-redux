@@ -78,7 +78,7 @@ new bool:g_bPermanentPrio;
 new bool:g_bEventPrio;
 
 
-LoadAbSettings()
+stock LoadAbSettings()
 {
 	g_bAutoBalance = GetConVarBool(g_hAutoBalance);
 	g_bPermanentPrio = GetConVarBool(g_hAbPriority);
