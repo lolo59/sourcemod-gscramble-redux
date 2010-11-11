@@ -372,12 +372,12 @@ public OnPluginStart()
 	g_iVoters = GetClientCount(false);
 	g_iVotesNeeded = RoundToFloor(float(g_iVoters) * GetConVarFloat(cvar_PublicNeeded));
 	/* Prep the SDK Call for checking the duel status */
-  hGameConf = LoadGameConfigFile("duel.tf2");
-  StartPrepSDKCall(SDKCall_Static);
-  PrepSDKCall_SetFromConf(hGameConf, SDKConf_Signature, "IsInDuel");
-  PrepSDKCall_AddParameter(SDKType_CBaseEntity, SDKPass_Pointer);
-  PrepSDKCall_SetReturnInfo(SDKType_PlainOldData, SDKPass_ByValue);
-  hIsInDuel = EndPrepSDKCall();
+	hGameConf = LoadGameConfigFile("duel.tf2");
+	StartPrepSDKCall(SDKCall_Static);
+	PrepSDKCall_SetFromConf(hGameConf, SDKConf_Signature, "IsInDuel");
+	PrepSDKCall_AddParameter(SDKType_CBaseEntity, SDKPass_Pointer);
+	PrepSDKCall_SetReturnInfo(SDKType_PlainOldData, SDKPass_ByValue);
+	hIsInDuel = EndPrepSDKCall();
 	
 }
 
@@ -446,7 +446,7 @@ public Action:CMD_Listener(client, const String:command[], argc)
 				{
 					GetCmdArgString(sArg, sizeof(sArg));
 				}
-				if (g_bNospec)
+				if (g_bNoSpec)
 				{
 					if (StrEqual(sArg, "spectate", false))
 					{
@@ -3382,7 +3382,12 @@ public Action:UserMessageHook_Class(UserMsg:msg_id, Handle:bf, const players[], 
 	BfReadString(bf, strMessage, sizeof(strMessage), true);
 	if (StrContains(strMessage, "#TF_TeamsSwitched", true) != -1)
 	{
-
+		SwapPreferences();
+		new oldRed = g_aTeams[iRedWins], oldBlu = g_aTeams[iBluWins];
+		g_aTeams[iRedWins] = oldBlu;
+		g_aTeams[iBluWins] = oldRed;
+		g_iTeamIds[0] == TEAM_RED ? (g_iTeamIds[0] = TEAM_BLUE) :  (g_iTeamIds[0] = TEAM_RED);
+		g_iTeamIds[1] == TEAM_RED ? (g_iTeamIds[1] = TEAM_BLUE) :  (g_iTeamIds[1] = TEAM_RED);
 	}
 	return Plugin_Continue;
 }
@@ -3546,7 +3551,7 @@ public SortIntsAsc(x[], y[], array[][], Handle:data)		// this sorts everything i
     return 0;
 }
 
-public SortIntsDsc(x[], y[], array[][], Handle:data)		// this sorts everything in the info array descending
+public SortIntsDesc(x[], y[], array[][], Handle:data)		// this sorts everything in the info array descending
 {
     if (x[1] > y[1]) 
 		return -1;
