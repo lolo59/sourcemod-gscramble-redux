@@ -115,7 +115,8 @@ new Handle:cvar_Version				= INVALID_HANDLE,
 	Handle:cvar_VoteAd			= INVALID_HANDLE,
 	Handle:cvar_BlockJointeam	= INVALID_HANDLE,
 	Handle:cvar_TopSwaps			= INVALID_HANDLE,
-	Handle:cvar_BalanceTimeLimit = INVALID_HANDLE;
+	Handle:cvar_BalanceTimeLimit = INVALID_HANDLE,
+	Handle:cvar_ScrLockTeams		= INVALID_HANDLE;
 
 new Handle:g_hAdminMenu 			= INVALID_HANDLE,
 	Handle:g_hScrambleVoteMenu 		= INVALID_HANDLE,
@@ -162,6 +163,7 @@ new bool:g_bScrambleNextRound = false,
 	bool:g_bUseBuddySystem,
 	bool:g_bSilent,
 	bool:g_bBlockJointeam,
+	bool:g_bNoSpec,
 	/**
 	overrides the auto scramble check
 	*/
@@ -334,6 +336,7 @@ public OnPluginStart()
 	cvar_AvgDiff			= CreateConVar("gs_as_playerscore_avgdiff", "10.0",	"If the average score difference for all players on each team is greater than this, then trigger a scramble.\n0 = skips this check", FCVAR_PLUGIN, true, 0.0, false);
 	cvar_DominationDiff		= CreateConVar("gs_as_domination_diff",		"10",	"If a team has this many more dominations than the other team, then trigger a scramble.\n0 = skips this check", FCVAR_PLUGIN, true, 0.0, false);
 	cvar_Koth				= CreateConVar("gs_as_koth_pointcheck",		"0",	"If enabled, trigger a scramble if a team never captures the point in koth mode.", FCVAR_PLUGIN, true, 0.0, true, 1.0);
+	cvar_ScrLockTeams		= CreateConVar("gs_as_lockteamsbefore", "1", "If enabled, lock the teams between the scramble check and the actual scramble", FCVAR_PLUGIN, true, 0.0, true, 1.0);
 	
 	cvar_Silent 		=	CreateConVar("gs_silent", "0", 	"Disable most commen chat messages", FCVAR_PLUGIN, true, 0.0, true, 1.0);
 	cvar_VoteCommand =	CreateConVar("gs_vote_trigger",	"votescramble", "The trigger for starting a vote-scramble", FCVAR_PLUGIN);
@@ -417,6 +420,7 @@ public Action:CMD_Listener(client, const String:command[], argc)
 	{
 		if (client && !IsFakeClient(client))
 		{
+			
 			if (g_bBlockJointeam)
 			{
 				if (GetConVarBool(cvar_AdminImmune))
@@ -437,11 +441,19 @@ public Action:CMD_Listener(client, const String:command[], argc)
 			}
 			if (IsValidTeam(client))
 			{
-				new String:sArg[4] = "-1";
+				new String:sArg[9] = "-1";
 				if (argc)
 				{
 					GetCmdArgString(sArg, sizeof(sArg));
 				}
+				if (g_bNospec)
+				{
+					if (StrEqual(sArg, "spectate", false))
+					{
+						HandleStacker(client);
+						return Plugin_Handled;
+					}
+				} 
 				if (IsBlocked(client))
 				{
 					if (g_aTeams[bImbalanced] && (StrEqual(sArg, "blue", false) || StrEqual(sArg, "red", false) || StringToInt(sArg) >= 2))
@@ -454,7 +466,7 @@ public Action:CMD_Listener(client, const String:command[], argc)
 					HandleStacker(client);
 					return Plugin_Handled;
 				}
-				if (GetConVarBool(cvar_ImbalancePrevent))
+				if (GetConVarBool(cvar_ImbalancePrevent) || g_bNoSpec)
 				{
 					if (StrEqual(command, "spectate", false) || StringToInt(sArg) < 2 || StrContains(sArg, "spec", false) != -1)
 					{
@@ -1870,6 +1882,7 @@ SwapPreferences()
 
 public hook_Start(Handle:event, const String:name[], bool:dontBroadcast)
 {
+	g_bNoSpec = false;
 	/**
 	check to see if the previos round warrented a trigger
 	moved to the start event to make checking for map ending uneeded
@@ -2010,6 +2023,10 @@ StartForceTimer(bool:autoTigger = false)
 
 public hook_Win(Handle:event, const String:name[], bool:dontBroadcast)
 {	
+	if (GetConVarBool(cvar_ScrLockTeams))
+	{
+		g_bNoSpec = false;
+	}
 	g_RoundState = bonusRound;	
 	g_bWasFullRound = false;	
 	if (GetEventBool(event, "full_round"))
