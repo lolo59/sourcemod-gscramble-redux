@@ -28,7 +28,7 @@ $Date$
 $LastChangedBy$
 $LastChangedDate$
 $URL$
-$Copyright: (c) Simple SourceMod Plugins 2008-2009$
+$Copyright: (c) TftTmng 2008-2011$
 *************************************************************************
 *************************************************************************
 */
@@ -135,6 +135,8 @@ new Handle:g_hVoteDelayTimer 		= INVALID_HANDLE,
 new Handle:g_cookie_timeBlocked 	= INVALID_HANDLE,
 	Handle:g_cookie_teamIndex		= INVALID_HANDLE,
 	Handle:g_cookie_serverIp		= INVALID_HANDLE;
+new Handle:hGameConf;
+new Handle:hIsInDuel;
 
 new bool:g_bScrambleNextRound = false,	
 	bool:g_bVoteAllowed, 			
@@ -358,7 +360,7 @@ public OnPluginStart()
 	AutoExecConfig(true, "plugin.gscramble");	
 	LoadTranslations("common.phrases");
 	LoadTranslations("gscramble.phrases");
-	
+		
 	CheckEstensions();
 	
 	new Handle:gTopMenu;
@@ -366,6 +368,13 @@ public OnPluginStart()
 		OnAdminMenuReady(gTopMenu);	
 	g_iVoters = GetClientCount(false);
 	g_iVotesNeeded = RoundToFloor(float(g_iVoters) * GetConVarFloat(cvar_PublicNeeded));
+	/* Prep the SDK Call for checking the duel status */
+  hGameConf = LoadGameConfigFile("duel.tf2");
+  StartPrepSDKCall(SDKCall_Static);
+  PrepSDKCall_SetFromConf(hGameConf, SDKConf_Signature, "IsInDuel");
+  PrepSDKCall_AddParameter(SDKType_CBaseEntity, SDKPass_Pointer);
+  PrepSDKCall_SetReturnInfo(SDKType_PlainOldData, SDKPass_ByValue);
+  hIsInDuel = EndPrepSDKCall();
 	
 }
 
@@ -395,6 +404,11 @@ RegCommands()
 	
 	RegConsoleCmd("preference",		cmd_Preference);
 	RegConsoleCmd("addbuddy", 		cmd_AddBuddy);
+}
+
+bool:IsInDuel(target)
+{
+  return SDKCall(hIsInDuel, target);
 }
 
 public Action:CMD_Listener(client, const String:command[], argc)
@@ -1869,10 +1883,14 @@ public hook_Start(Handle:event, const String:name[], bool:dontBroadcast)
 			if (g_bNoSequentialScramble)
 			{
 				if (!g_bScrambledThisRound)
+				{
 					bOkayToCheck = true;
+				}
 			}
 			else
+			{
 				bOkayToCheck = true;
+			}
 		}
 	}
 	if (bOkayToCheck)
@@ -1952,7 +1970,9 @@ public hook_Start(Handle:event, const String:name[], bool:dontBroadcast)
 public Action:Timer_ForceBalance(Handle:timer)
 {	
 	if (TeamsUnbalanced())
+	{
 		BalanceTeams(true);
+	}
 	g_aTeams[bImbalanced] = false;
 	g_hForceBalanceTimer = INVALID_HANDLE;
 	return Plugin_Handled;
@@ -2151,7 +2171,7 @@ CheckBalance(bool:post=false)
 		
 	if (post)
 	{
-		g_hCheckTimer = CreateTimer(0.1, timer_CheckBalance);
+		g_hCheckTimer = CreateTimer(0.5, timer_CheckBalance);
 		return;
 	}
 	if (TeamsUnbalanced())
@@ -2286,6 +2306,10 @@ bool:IsValidTarget(client, e_ImmunityModes:mode)
 	if (IsFakeClient(client))
 	{
 		return true;
+	}
+	if (IsInDuel(client))
+	{
+		return false;
 	}
 	// next check for buddies. if the buddy is on the wrong team, we skip the rest of the immunity checks
 	if (g_bUseBuddySystem)
@@ -2433,7 +2457,6 @@ stock ScramblePlayers(e_ImmunityModes:immuneMode, e_ScrambleModes:scrambleMode)
 			}
 		}
 	}
-	SetRandomSeed(2);
 	if (g_iLastRoundWinningTeam)
 	{
 		bRed = g_iLastRoundWinningTeam == TEAM_BLUE;
@@ -2472,58 +2495,46 @@ stock ScramblePlayers(e_ImmunityModes:immuneMode, e_ScrambleModes:scrambleMode)
 			scoreArray[i][1] = GetClientScrambleScore(iValidPlayers[i], scrambleMode);
 		}
 		
-		/** 
-		sort by lowest score, and even the immune imbalance if it exists
-		*/
-		if (iImmuneTeam)
-		{
-			SortCustom2D(_:scoreArray, iCount, SortScoreAsc);
-			for (i = 0; i < (iImmuneDiff / 2) && i < iCount; i++)
-			{
-				client = RoundFloat(scoreArray[i][0]);
-				g_bBlockDeath = true;
-				iTempTeam = GetClientTeam(client);
-				ChangeClientTeam(client, bRed ? TEAM_RED:TEAM_BLUE);
-				bRed = !bRed;
-				g_bBlockDeath = false;
-				iSwaps++;
-				if (iTempTeam != GetClientTeam(client))
-				{
-					PrintCenterText(client, "%t", "TeamChangedOne");
-				}
-			}
-		}
 		
 		/** 
 		now sort score descending 
 		and copy the array into the integer one
 		*/
-		SortCustom2D(_:scoreArray, iCount, SortScoreDesc);
+		SortCustom2D(_:scoreArray, iCount, SortScoreAsc);
 		for (i = 0; i < iCount; i++)
+		{
 			iValidPlayers[i] = RoundFloat(scoreArray[i][0]);
-			
+		}	
 	}
 	
 	if (scrambleMode == random)
 	{
 		SortIntegers(iValidPlayers, iCount, Sort_Random);
 	}
-	
+	g_bBlockDeath = true;
 	new iTemp = iSwaps;
+	iImmuneTeam == TEAM_RED ? (bRed = false):(bRed = true);
 	for (i = iTemp; i < iCount; i++)
 	{
 		client = iValidPlayers[i];
-		g_bBlockDeath = true;
-		iTempTeam = GetClientTeam(client);
-		ChangeClientTeam(client, bRed ? TEAM_RED:TEAM_BLUE);
-		bRed = !bRed;
-		g_bBlockDeath = false;
-		iSwaps++;
+		if (iImmuneDiff > 0)
+		{
+			ChangeClientTeam(client, iImmuneTeam == TEAM_RED ? TEAM_BLUE:TEAM_RED);
+			iImmuneDiff--;
+		}
+		else
+		{
+			iTempTeam = GetClientTeam(client);
+			ChangeClientTeam(client, bRed ? TEAM_RED:TEAM_BLUE);
+			bRed = !bRed;
+		}
 		if (GetClientTeam(client) != iTempTeam)
 		{
+			iSwaps++;
 			PrintCenterText(client, "%t", "TeamChangedOne");
 		}
 	}
+	g_bBlockDeath = false;
 	LogMessage("Scramble changed %i client's teams", iSwaps); 
 	BlockAllTeamChange();
 }
@@ -2925,6 +2936,10 @@ stock GetPlayerPriority(client)
 {
 	if (IsFakeClient(client))
 		return 0;
+	if (IsInDuel(client))
+	{
+		return -10;
+	}
 	if (g_bUseBuddySystem)
 	{
 		if (g_aPlayers[client][iBuddy])
@@ -3505,7 +3520,16 @@ bool:CheckSpecChange(client)
 	return false;
 }
 
-public SortIntsDesc(x[], y[], array[][], Handle:data)		// this sorts everything in the info array descending
+public SortIntsAsc(x[], y[], array[][], Handle:data)		// this sorts everything in the info array ascending
+{
+    if (x[1] > y[1]) 
+		return 1;
+    else if (x[1] < y[1]) 
+		return -1;    
+    return 0;
+}
+
+public SortIntsDsc(x[], y[], array[][], Handle:data)		// this sorts everything in the info array descending
 {
     if (x[1] > y[1]) 
 		return -1;
