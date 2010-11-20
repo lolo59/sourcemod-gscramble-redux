@@ -137,7 +137,6 @@ new Handle:g_cookie_timeBlocked 	= INVALID_HANDLE,
 	Handle:g_cookie_teamIndex		= INVALID_HANDLE,
 	Handle:g_cookie_serverIp		= INVALID_HANDLE;
 new Handle:hGameConf;
-new Handle:hIsInDuel;
 
 new bool:g_bScrambleNextRound = false,	
 	bool:g_bVoteAllowed, 			
@@ -371,14 +370,7 @@ public OnPluginStart()
 		OnAdminMenuReady(gTopMenu);	
 	g_iVoters = GetClientCount(false);
 	g_iVotesNeeded = RoundToFloor(float(g_iVoters) * GetConVarFloat(cvar_PublicNeeded));
-	/* Prep the SDK Call for checking the duel status */
-	hGameConf = LoadGameConfigFile("duel.tf2");
-	StartPrepSDKCall(SDKCall_Static);
-	PrepSDKCall_SetFromConf(hGameConf, SDKConf_Signature, "IsInDuel");
-	PrepSDKCall_AddParameter(SDKType_CBaseEntity, SDKPass_Pointer);
-	PrepSDKCall_SetReturnInfo(SDKType_PlainOldData, SDKPass_ByValue);
-	hIsInDuel = EndPrepSDKCall();
-	
+
 }
 
 stock CheckTranslation()
@@ -409,10 +401,6 @@ RegCommands()
 	RegConsoleCmd("addbuddy", 		cmd_AddBuddy);
 }
 
-bool:IsInDuel(target)
-{
-  return SDKCall(hIsInDuel, target);
-}
 
 public Action:CMD_Listener(client, const String:command[], argc)
 {
@@ -2324,7 +2312,7 @@ bool:IsValidTarget(client, e_ImmunityModes:mode)
 	{
 		return true;
 	}
-	if (IsInDuel(client))
+	if (TF2_IsPlayerInDuel(client))
 	{
 		return false;
 	}
@@ -2953,7 +2941,7 @@ stock GetPlayerPriority(client)
 {
 	if (IsFakeClient(client))
 		return 0;
-	if (IsInDuel(client))
+	if (TF2_IsPlayerInDuel(client))
 	{
 		return -10;
 	}
