@@ -136,7 +136,6 @@ new Handle:g_hVoteDelayTimer 		= INVALID_HANDLE,
 new Handle:g_cookie_timeBlocked 	= INVALID_HANDLE,
 	Handle:g_cookie_teamIndex		= INVALID_HANDLE,
 	Handle:g_cookie_serverIp		= INVALID_HANDLE;
-new Handle:hGameConf;
 
 new bool:g_bScrambleNextRound = false,	
 	bool:g_bVoteAllowed, 			
