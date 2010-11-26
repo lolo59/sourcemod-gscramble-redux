@@ -396,8 +396,8 @@ RegCommands()
 	AddCommandListener(CMD_Listener, "jointeam");
 	AddCommandListener(CMD_Listener, "spectate");
 	
-	RegConsoleCmd("preference",		cmd_Preference);
-	RegConsoleCmd("addbuddy", 		cmd_AddBuddy);
+	RegConsoleCmd("sm_preference",		cmd_Preference);
+	RegConsoleCmd("sm_addbuddy", 		cmd_AddBuddy);
 }
 
 
@@ -2012,7 +2012,7 @@ public hook_Win(Handle:event, const String:name[], bool:dontBroadcast)
 {	
 	if (GetConVarBool(cvar_ScrLockTeams))
 	{
-		g_bNoSpec = false;
+		g_bNoSpec = true;
 	}
 	g_RoundState = bonusRound;	
 	g_bWasFullRound = false;	
