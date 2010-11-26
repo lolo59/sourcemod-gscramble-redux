@@ -713,6 +713,7 @@ public Native_GS_IsBlocked(Handle:plugin, numParams)
 public OnConfigsExecuted()
 {
 	decl String:sMapName[32];
+	new bool:bAuto = false;
 	GetCurrentMap(sMapName, 32);
 	SetConVarString(cvar_Version, VERSION);
 	/**
@@ -755,8 +756,27 @@ public OnConfigsExecuted()
 	g_bKothMode = false; 
 	g_bArenaMode = false;
 	
+	if (GetConVarBool(cvar_AutoScramble) || GetConVarBool(cvar_WinStreak))
+	{
+		bAuto = true;
+	}
+	
 	if (GetConVarBool(cvar_Rounds))
+	{
+		bAuto = true;
 		g_iRoundTrigger = GetConVarInt(cvar_Rounds);
+	}
+	
+	/*
+		shut off tf2's built in auto-scramble
+		if gscramble's auto modes are enabled.
+	*/
+	if (bAuto && GetConVarBool(FindConVar("mp_scrambleteams_auto")))
+	{
+		SetConVarBool(FindConVar("mp_scrambleteams_auto"), false);
+		LogMessage("Setting mp_scrambleteams_auto false");
+	}
+	
 	if (GetConVarBool(cvar_Koth) && strncmp(sMapName, "koth_", 5, false) == 0)
 	{
 		g_bRedCapped = false;
