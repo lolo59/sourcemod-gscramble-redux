@@ -2008,23 +2008,22 @@ public Action:hook_Setup(Handle:event, const String:name[], bool:dontBroadcast)
 	return Plugin_Continue;
 }
 
-StartForceTimer(bool:autoTigger = false)
+stock StartForceTimer()
 {
 	if (g_bBlockDeath)
 	{
 		return;
 	}
 	if (g_hForceBalanceTimer != INVALID_HANDLE)
+	{
 		KillTimer(g_hForceBalanceTimer);
+	}
 	g_hForceBalanceTimer = INVALID_HANDLE;
 	new Float:fDelay;
-	if (autoTigger)
-		fDelay = 0.1;
-	else if (g_RoundState == normal)
+	if (1 > (fDelay = GetConVarFloat(cvar_MaxUnbalanceTime)))
 	{
-		if (1 > (fDelay = GetConVarFloat(cvar_MaxUnbalanceTime)))
-			return;
-	}	
+		return;
+	}
 	g_hForceBalanceTimer = CreateTimer(fDelay, Timer_ForceBalance, TIMER_FLAG_NO_MAPCHANGE);
 }
 
