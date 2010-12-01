@@ -2440,10 +2440,12 @@ Float:GetClientScrambleScore(client, e_ScrambleModes:mode)
 		return FloatDiv(float(g_aPlayers[client][iFrags]), float(g_aPlayers[client][iDeaths]));
 	}
 	new Float:fScore = float(TF2_GetPlayerResourceData(client, TFResource_TotalScore));
-	fScore *= fScore;
+	fScore = FloatMul(fScore, fScore);
 	if (!IsFakeClient(client))
 	{
-		fScore = FloatDiv(fScore, GetClientTime(client));
+		new iTime = GetClientTime(client);
+		new fTime = FloatDiv(Float(iTime), Float(60));
+		fScore = FloatDiv(fScore, fTime);
 	}
 	return fScore;	
 }
