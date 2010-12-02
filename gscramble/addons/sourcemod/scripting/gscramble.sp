@@ -43,6 +43,7 @@ $Copyright: (c) TftTmng 2008-2011$
 
 #undef REQUIRE_PLUGIN
 #include <adminmenu>
+#include <gameme>
 #define REQUIRE_PLUGIN
 
 #define VERSION "2.5.32"
@@ -162,6 +163,7 @@ new bool:g_bScrambleNextRound = false,
 	bool:g_bSilent,
 	bool:g_bBlockJointeam,
 	bool:g_bNoSpec,
+	bool:g_bUseGameMe,
 	/**
 	overrides the auto scramble check
 	*/
@@ -207,7 +209,11 @@ enum e_PlayerInfo
 	iBuddy,
 	iFrags,
 	iDeaths,
-	bool:bHasFlag
+	bool:bHasFlag,
+	iGameMe_Rank,
+	iGameMe_Skill,
+	iGameMe_gRank,
+	iGameMe_gSkill,
 };
 
 enum e_RoundState
@@ -250,7 +256,11 @@ enum e_ScrambleModes
 	scoreSqdPerMinute,
 	kdRatio,
 	topSwap,
-	randomSort
+	gameMe_Rank,
+	gameMe_Skill,
+	gameMe_gRank,
+	gameMe_gSkill,
+	randomSort,
 }
 
 new e_RoundState:g_RoundState,
@@ -307,7 +317,8 @@ public OnPluginStart()
 	cvar_PublicNeeded		= CreateConVar("gs_public_triggers", 	"0.60",		"Percentage of people needing to trigger a scramble in chat.  If using votemode 1, I suggest you set this lower than 50%", FCVAR_PLUGIN, true, 0.05, true, 1.0);
 	cvar_VoteEnable 		= CreateConVar("gs_public_votes",	"1", 		"Enable/disable public voting", FCVAR_PLUGIN, true, 0.0, true, 1.0);
 	cvar_Punish				= CreateConVar("gs_punish_stackers", "0", 		"Punish clients trying to restack teams during the team-switch block period by adding time to when they are able to team swap again", FCVAR_PLUGIN, true, 0.0, true, 1.0);
-	cvar_SortMode			= CreateConVar("gs_sort_mode",		"1",		"Player scramble sort mode.\n1 = Random\n2 = Player Score\n3 = Player Score Per Minute.\n4 = Kill-Death Ratio\n5 = Swap the top players on each team.\n6 = Choose a random sorting mode.\nThis controls how players get swapped during a scramble.", FCVAR_PLUGIN, true, 1.0, true, 6.0);
+	cvar_SortMode			= CreateConVar("gs_sort_mode",		"1",		
+		"Player scramble sort mode.\n1 = Random\n2 = Player Score\n3 = Player Score Per Minute.\n4 = Kill-Death Ratio\n5 = Swap the top players on each team.\n6 = Choose a random sorting mode.\n7 = GameMe rank\n8 = GameMe skill\n9 Global GameMe rank\n10 = Global GameMe Skill\nThis controls how players get swapped during a scramble.", FCVAR_PLUGIN, true, 1.0, true, 10.0);
 	cvar_TopSwaps			= CreateConVar("gs_top_swaps",		"5",		"Number of top players the top-swap scramble will switch", FCVAR_PLUGIN, true, 1.0, false);
 	
 	cvar_SetupCharge		= CreateConVar("gs_setup_recharge",		"1",		"If a scramble-now happens during setup time, fill up any medic's uber-charge.", FCVAR_PLUGIN, true, 0.0, true, 1.0);
@@ -364,12 +375,22 @@ public OnPluginStart()
 		
 	CheckEstensions();
 	
-	new Handle:gTopMenu;
-	if (LibraryExists("adminmenu") && ((gTopMenu = GetAdminTopMenu()) != INVALID_HANDLE))	
-		OnAdminMenuReady(gTopMenu);	
+		
 	g_iVoters = GetClientCount(false);
 	g_iVotesNeeded = RoundToFloor(float(g_iVoters) * GetConVarFloat(cvar_PublicNeeded));
 
+}
+
+public OnAllPluginsLoaded()
+{
+	g_bUseGameMe = false;
+	new Handle:gTopMenu;
+	if (LibraryExists("adminmenu") && ((gTopMenu = GetAdminTopMenu()) != INVALID_HANDLE))	
+		OnAdminMenuReady(gTopMenu);
+	if (LibraryExists("gameme"))
+	{
+		g_bUseGameMe = true;
+	}
 }
 
 stock CheckTranslation()
@@ -664,7 +685,7 @@ public APLRes:AskPluginLoad2(Handle:myself, bool:late, String:error[], err_max)
 		CreateTimer(1.0, Timer_load);
 	}
 		
-	CreateNative("GS_IsBlocked", Native_GS_IsBlocked);
+	CreateNative("GS_IsClientTeamChangeBlocked", Native_GS_IsBlocked);
 	MarkNativeAsOptional("TF2_IsPlayerInDuel");
 	MarkNativeAsOptional("RegClientCookie");
 	MarkNativeAsOptional("SetClientCookie");
@@ -700,7 +721,7 @@ public Native_GS_IsBlocked(Handle:plugin, numParams)
 {
 	new client = GetNativeCell(1),
 		initiator = GetNativeCell(2);
-	if (!client || client > MaxClients)
+	if (!client || client > MaxClients || !IsClientInGame(client))
 		return ThrowNativeError(SP_ERROR_NATIVE, "Invalid client index");
 	if (IsBlocked(client))
 	{
@@ -1077,6 +1098,28 @@ public hook_Event_GameStart(Handle:event, const String:name[], bool:dontBroadcas
 	g_RoundState = preGame;
 	g_aTeams[iRedWins] = 0;
 	g_aTeams[iBluWins] = 0;
+}
+
+public OnClientPutInServer(client)
+{
+	if (g_bUseGameMe && client > 0 && !IsFakeClient(client))
+	{
+		QueryGameMEStats("playerinfo", client, QuerygameMEStatsCallback, 1);
+	}
+}
+
+public QuerygameMEStatsCallback(command, payload, client, const total_cell_values[], const Float: total_float_values[], 
+		const session_cell_values[], const Float: session_float_values[],
+		const String: session_fav_weapon[], const global_cell_values[],
+		const Float: global_float_values[], const String: country_code[])
+{
+	if ((client > 0) && (command == RAW_MESSAGE_CALLBACK_PLAYER))
+	{
+		g_aPlayers[client][iGameMe_Rank] = total_cell_values[0];
+		g_aPlayers[client][iGameMe_Skill] = total_cell_values[2];
+		g_aPlayers[client][iGameMe_gRank] = global_cell_values[0];
+		g_aPlayers[client][iGameMe_gSkill] = global_cell_values[2];
+	}
 }
 
 public OnClientDisconnect(client)
@@ -1932,7 +1975,7 @@ public hook_Start(Handle:event, const String:name[], bool:dontBroadcast)
 		new rounds = GetConVarInt(cvar_Rounds);
 		if (rounds)
 			g_iRoundTrigger += rounds;
-		StartScrambleDelay(0.5, false, true);
+		StartScrambleDelay(0.0, false, true);
 	}
 	else if (GetConVarBool(cvar_ForceBalance) && g_hForceBalanceTimer == INVALID_HANDLE)
 	{
@@ -2439,12 +2482,28 @@ Float:GetClientScrambleScore(client, e_ScrambleModes:mode)
 	{
 		return FloatDiv(float(g_aPlayers[client][iFrags]), float(g_aPlayers[client][iDeaths]));
 	}
+	if (mode == gameMe_Rank)
+	{
+		return float(g_aPlayers[client][iGameMe_Rank]);
+	}
+	if (mode == gameMe_Skill)
+	{
+		return float(g_aPlayers[client][iGameMe_Skill]);
+	}
+	if (mode == gameMe_gRank)
+	{
+		return float(g_aPlayers[client][iGameMe_gRank]);
+	}
+	if (mode == gameMe_gSkill)
+	{
+		return float(g_aPlayers[client][iGameMe_gSkill]);
+	}
 	new Float:fScore = float(TF2_GetPlayerResourceData(client, TFResource_TotalScore));
 	fScore = FloatMul(fScore, fScore);
 	if (!IsFakeClient(client))
 	{
-		new iTime = GetClientTime(client);
-		new fTime = FloatDiv(Float(iTime), Float(60));
+		new Float:fClientTime = GetClientTime(client);
+		new Float:fTime = FloatDiv(fClientTime, 60.0);
 		fScore = FloatDiv(fScore, fTime);
 	}
 	return fScore;	
@@ -2668,11 +2727,16 @@ public Action:timer_ScrambleDelay(Handle:timer, any:data)  // scramble logic
 	
 	if (scrambleMode == randomSort)
 	{
-		scrambleMode = e_ScrambleModes:(GetRandomInt(1,5));
+		new iHigh = 6;
+		if (g_bUseGameMe)
+		{
+			iHigh = 10;
+		}
+		scrambleMode = e_ScrambleModes:(GetRandomInt(1,iHigh));
 	}
 	ScramblePlayers(immuneMode, scrambleMode);
 	
-	CreateTimer(0.5, Timer_ScrambleSound);
+	CreateTimer(1.0, Timer_ScrambleSound);
 	DelayPublicVoteTriggering(true);
 	new bool:spawn = false;
 	if (respawn || g_bPreGameScramble)
@@ -3067,6 +3131,10 @@ public OnLibraryRemoved(const String:name[])
 {
 	if (StrEqual(name, "adminmenu"))		
 		g_hAdminMenu = INVALID_HANDLE;
+	if (StrEqual(name, "gameme", false))
+	{
+		g_bUseGameMe = false;
+	}
 }
 
 public OnAdminMenuReady(Handle:topmenu)
