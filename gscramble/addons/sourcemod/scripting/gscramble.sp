@@ -853,6 +853,10 @@ public OnConfigsExecuted()
 	{
 		g_bBlockJointeam = false;
 	}
+	if (g_bUseGameMe && e_ScrambleModes:GetConVarInt(cvar_SortMode) == gameMe_SkillChange)
+	{
+		StartSkillUpdates();
+	}
 }
 
 public Action:Timer_VoteAd(Handle:timer)
