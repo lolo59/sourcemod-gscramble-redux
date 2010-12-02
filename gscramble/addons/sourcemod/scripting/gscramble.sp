@@ -387,8 +387,9 @@ public OnAllPluginsLoaded()
 	new Handle:gTopMenu;
 	if (LibraryExists("adminmenu") && ((gTopMenu = GetAdminTopMenu()) != INVALID_HANDLE))	
 		OnAdminMenuReady(gTopMenu);
-	if (LibraryExists("gameme"))
+	if (LibraryExists("gameme") && GetFeatureStatus(FeatureType_Native, "QueryGameMEStats") == FeatureStatus_Available)
 	{
+		LogMessage("GameMe Available");
 		g_bUseGameMe = true;
 	}
 }
