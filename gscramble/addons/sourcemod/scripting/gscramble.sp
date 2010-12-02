@@ -46,7 +46,7 @@ $Copyright: (c) TftTmng 2008-2011$
 #include <gameme>
 #define REQUIRE_PLUGIN
 
-#define VERSION "3.0.0b"
+#define VERSION "3.0.01b"
 #define TEAM_RED 2
 #define TEAM_BLUE 3
 #define SCRAMBLE_SOUND "vo/announcer_am_teamscramble03.wav"
@@ -121,7 +121,8 @@ new Handle:cvar_Version				= INVALID_HANDLE,
 
 new Handle:g_hAdminMenu 			= INVALID_HANDLE,
 	Handle:g_hScrambleVoteMenu 		= INVALID_HANDLE,
-	Handle:g_hScrambleNowPack		= INVALID_HANDLE;
+	Handle:g_hScrambleNowPack		= INVALID_HANDLE,
+	Handle:g_hGameMeUpdateTimer 	= INVALID_HANDLE;
 
 /**
 timer handles
@@ -214,6 +215,7 @@ enum e_PlayerInfo
 	iGameMe_Skill,
 	iGameMe_gRank,
 	iGameMe_gSkill,
+	iGameMe_SkillChange,
 };
 
 enum e_RoundState
@@ -260,6 +262,7 @@ enum e_ScrambleModes
 	gameMe_Skill,
 	gameMe_gRank,
 	gameMe_gSkill,
+	gameMe_SkillChange,
 	randomSort,
 }
 
@@ -318,7 +321,7 @@ public OnPluginStart()
 	cvar_VoteEnable 		= CreateConVar("gs_public_votes",	"1", 		"Enable/disable public voting", FCVAR_PLUGIN, true, 0.0, true, 1.0);
 	cvar_Punish				= CreateConVar("gs_punish_stackers", "0", 		"Punish clients trying to restack teams during the team-switch block period by adding time to when they are able to team swap again", FCVAR_PLUGIN, true, 0.0, true, 1.0);
 	cvar_SortMode			= CreateConVar("gs_sort_mode",		"1",		
-		"Player scramble sort mode.\n1 = Random\n2 = Player Score\n3 = Player Score Per Minute.\n4 = Kill-Death Ratio\n5 = Swap the top players on each team.\n6 = Choose a random sorting mode.\n7 = GameMe rank\n8 = GameMe skill\n9 Global GameMe rank\n10 = Global GameMe Skill\nThis controls how players get swapped during a scramble.", FCVAR_PLUGIN, true, 1.0, true, 10.0);
+		"Player scramble sort mode.\n1 = Random\n2 = Player Score\n3 = Player Score Per Minute.\n4 = Kill-Death Ratio\n5 = Swap the top players on each team.\n6 = GameMe rank\n7 = GameMe skill\n8 Global GameMe rank\n9 = Global GameMe Skill\n10 = GameMe session skill change.\n11 = random mode.\nThis controls how players get swapped during a scramble.", FCVAR_PLUGIN, true, 1.0, true, 11.0);
 	cvar_TopSwaps			= CreateConVar("gs_top_swaps",		"5",		"Number of top players the top-swap scramble will switch", FCVAR_PLUGIN, true, 1.0, false);
 	
 	cvar_SetupCharge		= CreateConVar("gs_setup_recharge",		"1",		"If a scramble-now happens during setup time, fill up any medic's uber-charge.", FCVAR_PLUGIN, true, 0.0, true, 1.0);
@@ -368,6 +371,7 @@ public OnPluginStart()
 	HookConVarChange(cvar_VoteMode, handler_ConVarChange);
 	HookConVarChange(cvar_Balancer, handler_ConVarChange);
 	HookConVarChange(cvar_NoSequentialScramble, handler_ConVarChange);
+	HookConVarChange(cvar_SortMode, handler_ConVarChange);
 	
 	AutoExecConfig(true, "plugin.gscramble");	
 	LoadTranslations("common.phrases");
@@ -882,6 +886,18 @@ public handler_ConVarChange(Handle:convar, const String:oldValue[], const String
 		}
 	}
 	
+	if (convar == cvar_SortMode)
+	{
+		if (g_bUseGameMe && e_ScrambleModes:iNewValue == gameMe_SkillChange)
+		{
+			StartSkillUpdates();
+		}
+		else
+		{
+			StopSkillUpdates();
+		}
+	}
+	
 	if (convar == cvar_FullRoundOnly)
 		iNewValue == 1 ? (g_bFullRoundOnly = true) : (g_bFullRoundOnly = false);
 	
@@ -904,6 +920,43 @@ public handler_ConVarChange(Handle:convar, const String:oldValue[], const String
 		iNewValue == 1 ? (g_iDefMode = Scramble_Now) : (g_iDefMode = Scramble_Round);
 	if (convar == cvar_NoSequentialScramble)
 		g_bNoSequentialScramble = iNewValue?true:false;
+}
+
+stock StartSkillUpdates()
+{
+	if (g_hGameMeUpdateTimer != INVALID_HANDLE)
+	{
+		return;
+	}
+	LogMessage("Starting gameMe data update timer");
+	g_hGameMeUpdateTimer = CreateTimer(60.0, Timer_GameMeUpdater, _, TIMER_REPEAT);
+	UpdateSessionSkill();
+}
+
+public Action:Timer_GameMeUpdater(Handle:timer)
+{
+	UpdateSessionSkill();
+	return Plugin_Continue;
+}
+
+stock StopSkillUpdates()
+{
+	if (g_hGameMeUpdateTimer != INVALID_HANDLE)
+	{
+		KillTimer(g_hGameMeUpdateTimer);
+		g_hGameMeUpdateTimer = INVALID_HANDLE;
+	}
+}
+
+stock UpdateSessionSkill()
+{
+	for (new i = 1; i <= MaxClients; i++)
+	{
+		if (IsClientInGame(i) && !IsFakeClient(i))
+		{
+			QueryGameMEStats("playerinfo", i, QuerygameMEStatsCallback, 0);
+		}
+	}
 }
 
 hook()
@@ -1121,6 +1174,7 @@ public QuerygameMEStatsCallback(command, payload, client, const total_cell_value
 		g_aPlayers[client][iGameMe_Skill] = total_cell_values[2];
 		g_aPlayers[client][iGameMe_gRank] = global_cell_values[0];
 		g_aPlayers[client][iGameMe_gSkill] = global_cell_values[2];
+		g_aPlayers[client][iGameMe_SkillChange] = session_cell_values[1];
 	}
 }
 
@@ -2500,6 +2554,10 @@ Float:GetClientScrambleScore(client, e_ScrambleModes:mode)
 	{
 		return float(g_aPlayers[client][iGameMe_gSkill]);
 	}
+	if (mode == gameMe_SkillChange)
+	{
+		return float(g_aPlayers[client][iGameMe_SkillChange]);
+	}
 	new Float:fScore = float(TF2_GetPlayerResourceData(client, TFResource_TotalScore));
 	fScore = FloatMul(fScore, fScore);
 	if (!IsFakeClient(client))
@@ -2738,7 +2796,7 @@ public Action:timer_ScrambleDelay(Handle:timer, any:data)  // scramble logic
 		new iHigh = 6;
 		if (g_bUseGameMe)
 		{
-			iHigh = 9;
+			iHigh = 10;
 		}
 		scrambleMode = e_ScrambleModes:(GetRandomInt(1,iHigh));
 	}
@@ -3366,7 +3424,16 @@ public Handle_RespawnMenu(Handle:scrambleResetMenu, MenuAction:action, client, p
 			AddMenuItem(modeSelectMenu, "3", "Player-Score^2/Connect time (in minutes)");
 			AddMenuItem(modeSelectMenu, "4", "Player kill-Death ratios");
 			AddMenuItem(modeSelectMenu, "5", "Swap the top players on each team");
-			AddMenuItem(modeSelectMenu, "6", "Random Sort-Mode");
+			
+			if (g_bUseGameMe)
+			{
+				AddMenuItem(modeSelectMenu, "6", "Use GameME Rank");
+				AddMenuItem(modeSelectMenu, "7", "Use GameME Skill");
+				AddMenuItem(modeSelectMenu, "8", "Use GameME Global Rank");
+				AddMenuItem(modeSelectMenu, "9", "Use GameME Global Skill");
+				AddMenuItem(modeSelectMenu, "10", "Use GameME Session Skill Change");
+			}
+			AddMenuItem(modeSelectMenu, "11", "Random Sort-Mode");
 			DisplayMenu(modeSelectMenu, client, MENU_TIME_FOREVER);
 		}
 		
