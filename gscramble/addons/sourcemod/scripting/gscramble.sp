@@ -2725,12 +2725,18 @@ public Action:timer_ScrambleDelay(Handle:timer, any:data)  // scramble logic
 	g_aTeams[iBluWins] = 0;
 	g_aTeams[bImbalanced] = false;	
 	
+	if (scrambleMode >= gameMe_Rank && !g_bUseGameMe)
+	{
+		LogError("GameMe function set in CFG, but GameMe is not loaded");
+		scrambleMode = randomSort;
+	}
+	
 	if (scrambleMode == randomSort)
 	{
 		new iHigh = 6;
 		if (g_bUseGameMe)
 		{
-			iHigh = 10;
+			iHigh = 9;
 		}
 		scrambleMode = e_ScrambleModes:(GetRandomInt(1,iHigh));
 	}
