@@ -46,7 +46,7 @@ $Copyright: (c) TftTmng 2008-2011$
 #include <gameme>
 #define REQUIRE_PLUGIN
 
-#define VERSION "2.5.32"
+#define VERSION "3.0.0b"
 #define TEAM_RED 2
 #define TEAM_BLUE 3
 #define SCRAMBLE_SOUND "vo/announcer_am_teamscramble03.wav"
@@ -687,7 +687,7 @@ public APLRes:AskPluginLoad2(Handle:myself, bool:late, String:error[], err_max)
 	}
 		
 	CreateNative("GS_IsClientTeamChangeBlocked", Native_GS_IsBlocked);
-	MarkNativeAsOptional("QueryGameMEeStats");
+	MarkNativeAsOptional("QueryGameMEStats");
 	MarkNativeAsOptional("TF2_IsPlayerInDuel");
 	MarkNativeAsOptional("RegClientCookie");
 	MarkNativeAsOptional("SetClientCookie");

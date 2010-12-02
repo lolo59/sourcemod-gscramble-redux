@@ -53,7 +53,7 @@ public SharedPlugin:_pl_gscramble =
 
 public _pl_gscramble_SetNTVOptional()
 {
-	MarkNativeAsOptional("GS_IsBlocked");
+	MarkNativeAsOptional("GS_IsClientTeamChangeBlocked");
 }
 
 /**
@@ -64,4 +64,4 @@ public _pl_gscramble_SetNTVOptional()
  * @return           True if blocked, false if not.
  * @errors           Invalid client index. Bots are not supported
  */
-native bool:GS_IsBlocked(client, initiator);
+native bool:GS_IsClientTeamChangeBlocked(client, initiator);
