@@ -391,16 +391,6 @@ public OnAllPluginsLoaded()
 	new Handle:gTopMenu;
 	if (LibraryExists("adminmenu") && ((gTopMenu = GetAdminTopMenu()) != INVALID_HANDLE))	
 		OnAdminMenuReady(gTopMenu);
-	if (FindConVar("gameme_plugin_version") != INVALID_HANDLE)
-	{
-		LogMessage("GameMe Available");
-		g_bUseGameMe = true;
-	}
-	else
-	{
-		g_bUseGameMe = false;
-		LogMessage("GameMe Unavailavble");
-	}
 }
 
 stock CheckTranslation()
@@ -746,6 +736,16 @@ public Native_GS_IsBlocked(Handle:plugin, numParams)
 
 public OnConfigsExecuted()
 {
+	if (FindConVar("gameme_plugin_version") != INVALID_HANDLE && GetFeatureStatus(FeatureType_Native, "QueryGameMEStats") == FeatureStatus_Available)
+	{
+		LogMessage("GameMe Available");
+		g_bUseGameMe = true;
+	}
+	else
+	{
+		g_bUseGameMe = false;
+		LogMessage("GameMe Unavailavble");
+	}
 	decl String:sMapName[32];
 	new bool:bAuto = false;
 	GetCurrentMap(sMapName, 32);
