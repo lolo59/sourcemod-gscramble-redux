@@ -391,10 +391,15 @@ public OnAllPluginsLoaded()
 	new Handle:gTopMenu;
 	if (LibraryExists("adminmenu") && ((gTopMenu = GetAdminTopMenu()) != INVALID_HANDLE))	
 		OnAdminMenuReady(gTopMenu);
-	if (LibraryExists("gameme") && GetFeatureStatus(FeatureType_Native, "QueryGameMEStats") == FeatureStatus_Available)
+	if (FindConVar("gameme_plugin_version") != INVALID_HANDLE)
 	{
 		LogMessage("GameMe Available");
 		g_bUseGameMe = true;
+	}
+	else
+	{
+		g_bUseGameMe = false;
+		LogMessage("GameMe Unavailavble");
 	}
 }
 
@@ -696,6 +701,7 @@ public APLRes:AskPluginLoad2(Handle:myself, bool:late, String:error[], err_max)
 	MarkNativeAsOptional("RegClientCookie");
 	MarkNativeAsOptional("SetClientCookie");
 	MarkNativeAsOptional("GetClientCookie");
+	RegPluginLibrary("gscramble");
 	return APLRes_Success;
 }
 
@@ -954,12 +960,19 @@ stock StopSkillUpdates()
 
 stock UpdateSessionSkill()
 {
-	for (new i = 1; i <= MaxClients; i++)
+	if (GetFeatureStatus(FeatureType_Native, "QueryGameMEStats") == FeatureStatus_Available)
 	{
-		if (IsClientInGame(i) && !IsFakeClient(i))
+		for (new i = 1; i <= MaxClients; i++)
 		{
-			QueryGameMEStats("playerinfo", i, QuerygameMEStatsCallback, 0);
+			if (IsClientInGame(i) && !IsFakeClient(i))
+			{
+				QueryGameMEStats("playerinfo", i, QuerygameMEStatsCallback, 0);
+			}
 		}
+	}
+	else 
+	{
+		g_bUseGameMe = false;
 	}
 }
 
@@ -1163,7 +1176,14 @@ public OnClientPutInServer(client)
 {
 	if (g_bUseGameMe && client > 0 && !IsFakeClient(client))
 	{
-		QueryGameMEStats("playerinfo", client, QuerygameMEStatsCallback, 1);
+		if (GetFeatureStatus(FeatureType_Native, "QueryGameMEStats") == FeatureStatus_Available)
+		{
+			QueryGameMEStats("playerinfo", client, QuerygameMEStatsCallback, 1);
+		}
+		else
+		{
+			g_bUseGameMe = false;
+		}
 	}
 }
 
@@ -2977,7 +2997,7 @@ stock StartScrambleDelay(Float:delay = 5.0, bool:auto = false, bool:respawn = fa
 		mode = e_ScrambleModes:GetConVarInt(cvar_SortMode);
 	
 	new Handle:data;
-	g_hScrambleDelay = CreateDataTimer(delay, timer_ScrambleDelay, data, TIMER_FLAG_NO_MAPCHANGE);
+	g_hScrambleDelay = CreateDataTimer(delay, timer_ScrambleDelay, data, TIMER_FLAG_NO_MAPCHANGE|TIMER_DATA_HNDL_CLOSE );
 	WritePackCell(data, auto);
 	WritePackCell(data, respawn);
 	WritePackCell(data, _:mode);
@@ -3201,10 +3221,6 @@ public OnLibraryRemoved(const String:name[])
 {
 	if (StrEqual(name, "adminmenu"))		
 		g_hAdminMenu = INVALID_HANDLE;
-	if (StrEqual(name, "gameme", false))
-	{
-		g_bUseGameMe = false;
-	}
 }
 
 public OnAdminMenuReady(Handle:topmenu)
