@@ -3193,7 +3193,9 @@ stock bool:TF2_IsClientUberCharged(client)
 
 stock bool:TF2_IsClientUbered(client)
 {
-	if (GetEntProp(client, Prop_Send, "m_nPlayerCond") & 32)
+	if (((GetEntProp(client, Prop_Send, "m_nPlayerCond")|GetEntProp(client, Prop_Send, "_condition_bits")) & TF_CONDFLAG_UBERCHARGED) == TF_CONDFLAG_UBERCHARGED)
+		return true;
+	if (((GetEntProp(client, Prop_Send, "m_nPlayerCond")|GetEntProp(client, Prop_Send, "_condition_bits")) & TF_CONDFLAG_KRITZKRIEGED) == TF_CONDFLAG_KRITZKRIEGED)
 		return true;
 	return false;
 }
