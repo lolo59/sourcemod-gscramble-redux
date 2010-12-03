@@ -46,7 +46,7 @@ $Copyright: (c) TftTmng 2008-2011$
 #include <gameme>
 #define REQUIRE_PLUGIN
 
-#define VERSION "3.0.01b"
+#define VERSION "3.0.02b"
 #define TEAM_RED 2
 #define TEAM_BLUE 3
 #define SCRAMBLE_SOUND "vo/announcer_am_teamscramble03.wav"
@@ -3194,7 +3194,7 @@ stock bool:TF2_IsClientUberCharged(client)
 stock bool:TF2_IsClientUbered(client)
 {
 	if (((GetEntProp(client, Prop_Send, "m_nPlayerCond")|GetEntProp(client, Prop_Send, "_condition_bits")) & TF_CONDFLAG_UBERCHARGED) == TF_CONDFLAG_UBERCHARGED)
-		return true;
+		return true; 
 	if (((GetEntProp(client, Prop_Send, "m_nPlayerCond")|GetEntProp(client, Prop_Send, "_condition_bits")) & TF_CONDFLAG_KRITZKRIEGED) == TF_CONDFLAG_KRITZKRIEGED)
 		return true;
 	return false;
