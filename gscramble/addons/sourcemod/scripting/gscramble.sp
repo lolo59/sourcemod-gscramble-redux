@@ -46,7 +46,7 @@ $Copyright: (c) TftTmng 2008-2011$
 #include <gameme>
 #define REQUIRE_PLUGIN
 
-#define VERSION "3.0.02b"
+#define VERSION "3.0.03b"
 #define TEAM_RED 2
 #define TEAM_BLUE 3
 #define SCRAMBLE_SOUND "vo/announcer_am_teamscramble03.wav"
