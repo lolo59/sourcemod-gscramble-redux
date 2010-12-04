@@ -2682,6 +2682,7 @@ stock ScramblePlayers(e_ImmunityModes:immuneMode, e_ScrambleModes:scrambleMode)
 	
 	if (scrambleMode == random)
 	{
+		SortIntegers(iValidPlayers, iCount, Sort_Random);
 		DoRandomSort(iValidPlayers, iCount);
 	}
 	g_bBlockDeath = true;
@@ -2720,8 +2721,9 @@ stock DoRandomSort(array[], count)
 		iBluValidCount,
 		iBluCount = GetTeamClientCount(TEAM_BLUE),
 		iRedCount = GetTeamClientCount(TEAM_RED),
-		iAdd, iDiff,
+		iTeamAdd, iDiff, iValidDiff, iValidAdd,
 		Float:fSelections = GetConVarFloat(cvar_RandomSelections);
+	PrintToChatAll("%f", fSelections);
 	decl aReds[count][2],
 		aBlus[count][2];
 	for (new i = 0; i < count; i++)
@@ -2737,19 +2739,34 @@ stock DoRandomSort(array[], count)
 			aBlus[i][0] = array[i];
 		}
 	}
+	if (iRedValidCount > iBluValidCount)
+	{
+		iValidDiff = iRedValidCount - iBluValidCount;
+		iValidAdd = RoundToFloor(FloatDiv(float(iValidDiff), 2.0));
+	}
+	else if (iBluValidCount > iRedValidCount)
+	{
+		iValidDiff = iBluValidCount - iRedValidCount;
+		iValidAdd = RoundToFloor(FloatDiv(float(iValidDiff), 2.0));
+	}
 	if (iBluCount > iRedCount)
 	{
 		iDiff = iBluCount - iRedCount; 
-		iRedSelections = RoundToFloor(FloatMul(fSelections, float(iRedCount)));
-		iAdd = RoundToFloor(FloatDiv(float(iDiff), 2.0));
-		iBluSelections = iRedSelections + iAdd;
+		iRedSelections = RoundToCeil(FloatMul(fSelections, float(iRedCount)));
+		iTeamAdd = RoundToFloor(FloatDiv(float(iDiff), 2.0));
+		iBluSelections = iRedSelections + iTeamAdd;
 	}
 	else if (iRedCount > iBluCount)
 	{
 		iDiff = iRedCount - iBluCount;
-		iBluSelections = RoundToFloor(FloatMul(fSelections, float(iBluCount)));
-		iAdd = RoundToFloor(FloatDiv(float(iDiff), 2.0));
-		iRedSelections = iBluSelections + iAdd;
+		iBluSelections = RoundToCeil(FloatMul(fSelections, float(iBluCount)));
+		iTeamAdd = RoundToFloor(FloatDiv(float(iDiff), 2.0));
+		iRedSelections = iBluSelections + iTeamAdd;
+	}
+	else 
+	{
+		iBluSelections = RoundToCeil(FloatMul(fSelections, float(iBluCount)));
+		iRedSelections = iBluSelections;
 	}
 	if (iRedSelections > iRedValidCount)
 	{
@@ -2759,15 +2776,26 @@ stock DoRandomSort(array[], count)
 	{
 		iBluSelections = iBluValidCount;
 	}
-	if (iAdd)
+	if (iTeamAdd)
 	{
 		if (iRedCount > iBluCount)
 		{
-			iBluSelections -= iAdd;
+			iBluSelections -= iTeamAdd;
 		}
 		else
 		{
-			iRedSelections -=  iAdd;
+			iRedSelections -=  iTeamAdd;
+		}
+	}
+	if (iValidAdd)
+	{
+		if (iRedValidCount > iBluValidCount)
+		{
+			iBluSelections -= iValidAdd;
+		}
+		else
+		{
+			iRedSelections -= iValidAdd;
 		}
 	}
 	SelectRandom(aReds, iRedValidCount, iRedSelections);
@@ -2776,16 +2804,16 @@ stock DoRandomSort(array[], count)
 	{
 		if (i < iBluValidCount)
 		{
-			if (aBlus[i][1])
+			if (aBlus[i][1] == 1 && aBlus[i][0])
 			{
-				ChangeClientTeam(aBlus[i][0], GetClientTeam(aBlus[i][1]) == TEAM_RED ? TEAM_BLUE:TEAM_RED);
+				ChangeClientTeam(aBlus[i][0], GetClientTeam(aBlus[i][0]) == TEAM_RED ? TEAM_BLUE:TEAM_RED);
 			}
 		}
 		if (i < iRedValidCount)
 		{
-			if (aReds[i][1])
+			if (aReds[i][1] == 1 && aReds[i][0])
 			{
-				ChangeClientTeam(aReds[i][0], GetClientTeam(aReds[i][1]) == TEAM_RED ? TEAM_BLUE:TEAM_RED);
+				ChangeClientTeam(aReds[i][0], GetClientTeam(aReds[i][0]) == TEAM_RED ? TEAM_BLUE:TEAM_RED);
 			}
 		}
 	}
