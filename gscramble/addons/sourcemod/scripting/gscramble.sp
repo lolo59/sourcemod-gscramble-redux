@@ -117,7 +117,8 @@ new Handle:cvar_Version				= INVALID_HANDLE,
 	Handle:cvar_BlockJointeam	= INVALID_HANDLE,
 	Handle:cvar_TopSwaps			= INVALID_HANDLE,
 	Handle:cvar_BalanceTimeLimit = INVALID_HANDLE,
-	Handle:cvar_ScrLockTeams		= INVALID_HANDLE;
+	Handle:cvar_ScrLockTeams		= INVALID_HANDLE,
+	Handle:cvar_RandomSelections = INVALID_HANDLE;
 
 new Handle:g_hAdminMenu 			= INVALID_HANDLE,
 	Handle:g_hScrambleVoteMenu 		= INVALID_HANDLE,
@@ -322,6 +323,7 @@ public OnPluginStart()
 	cvar_Punish				= CreateConVar("gs_punish_stackers", "0", 		"Punish clients trying to restack teams during the team-switch block period by adding time to when they are able to team swap again", FCVAR_PLUGIN, true, 0.0, true, 1.0);
 	cvar_SortMode			= CreateConVar("gs_sort_mode",		"1",		
 		"Player scramble sort mode.\n1 = Random\n2 = Player Score\n3 = Player Score Per Minute.\n4 = Kill-Death Ratio\n5 = Swap the top players on each team.\n6 = GameMe rank\n7 = GameMe skill\n8 Global GameMe rank\n9 = Global GameMe Skill\n10 = GameMe session skill change.\n11 = random mode.\nThis controls how players get swapped during a scramble.", FCVAR_PLUGIN, true, 1.0, true, 11.0);
+	cvar_RandomSelections = CreateConVar("gs_random_selections", "0.55", "Percentage of players to swap during a random scramble", FCVAR_PLUGIN, true, 0.1, true, 0.80);
 	cvar_TopSwaps			= CreateConVar("gs_top_swaps",		"5",		"Number of top players the top-swap scramble will switch", FCVAR_PLUGIN, true, 1.0, false);
 	
 	cvar_SetupCharge		= CreateConVar("gs_setup_recharge",		"1",		"If a scramble-now happens during setup time, fill up any medic's uber-charge.", FCVAR_PLUGIN, true, 0.0, true, 1.0);
@@ -2680,7 +2682,7 @@ stock ScramblePlayers(e_ImmunityModes:immuneMode, e_ScrambleModes:scrambleMode)
 	
 	if (scrambleMode == random)
 	{
-		SortIntegers(iValidPlayers, iCount, Sort_Random);
+		DoRandomSort(iValidPlayers, iCount);
 	}
 	g_bBlockDeath = true;
 	new iTemp = iSwaps;
@@ -2709,6 +2711,101 @@ stock ScramblePlayers(e_ImmunityModes:immuneMode, e_ScrambleModes:scrambleMode)
 	LogMessage("Scramble changed %i client's teams", iSwaps); 
 	BlockAllTeamChange();
 }
+
+stock DoRandomSort(array[], count)
+{
+	new iRedSelections,
+		iBluSelections,
+		iRedValidCount,
+		iBluValidCount,
+		iBluCount = GetTeamClientCount(TEAM_BLUE),
+		iRedCount = GetTeamClientCount(TEAM_RED),
+		iAdd, iDiff,
+		Float:fSelections = GetConVarFloat(cvar_RandomSelections);
+	decl aReds[count][2],
+		aBlus[count][2];
+	for (new i = 0; i < count; i++)
+	{
+		if (GetClientTeam(array[i]) == TEAM_RED)
+		{
+			iRedValidCount++;
+			aReds[i][0] = array[i];
+		}
+		else
+		{
+			iBluValidCount++;
+			aBlus[i][0] = array[i];
+		}
+	}
+	if (iBluCount > iRedCount)
+	{
+		iDiff = iBluCount - iRedCount; 
+		iRedSelections = RoundToFloor(FloatMul(fSelections, float(iRedCount)));
+		iAdd = RoundToFloor(FloatDiv(float(iDiff), 2.0));
+		iBluSelections = iRedSelections + iAdd;
+	}
+	else if (iRedCount > iBluCount)
+	{
+		iDiff = iRedCount - iBluCount;
+		iBluSelections = RoundToFloor(FloatMul(fSelections, float(iBluCount)));
+		iAdd = RoundToFloor(FloatDiv(float(iDiff), 2.0));
+		iRedSelections = iBluSelections + iAdd;
+	}
+	if (iRedSelections > iRedValidCount)
+	{
+		iRedSelections = iRedValidCount;
+	}
+	if (iBluSelections > iBluValidCount)
+	{
+		iBluSelections = iBluValidCount;
+	}
+	if (iAdd)
+	{
+		if (iRedCount > iBluCount)
+		{
+			iBluSelections -= iAdd;
+		}
+		else
+		{
+			iRedSelections -=  iAdd;
+		}
+	}
+	SelectRandom(aReds, iRedValidCount, iRedSelections);
+	SelectRandom(aBlus, iBluValidCount, iBluSelections);
+	for (new i = 0; i < count; i++)
+	{
+		if (i < iBluValidCount)
+		{
+			if (aBlus[i][1])
+			{
+				ChangeClientTeam(aBlus[i][0], GetClientTeam(aBlus[i][1]) == TEAM_RED ? TEAM_BLUE:TEAM_RED);
+			}
+		}
+		if (i < iRedValidCount)
+		{
+			if (aReds[i][1])
+			{
+				ChangeClientTeam(aReds[i][0], GetClientTeam(aReds[i][1]) == TEAM_RED ? TEAM_BLUE:TEAM_RED);
+			}
+		}
+	}
+}
+
+stock SelectRandom(arr[][], size, numSelectsToMake) 
+{ 
+	new temp[size], deselected;	 
+	while(numSelectsToMake-- > 0) 
+	{ 
+		deselected = 0; 
+		for(new i = 0; i < size; i++) if(!arr[i][1]) temp[deselected++] = i; 
+		if (!deselected)
+		{
+			return;
+		}
+		new n = GetRandomInt(0, deselected - 1); 
+		arr[temp[n]][1] = 1;
+	} 
+} 
 
 stock PerformTopSwap(e_ImmunityModes:immuneMode)
 {
