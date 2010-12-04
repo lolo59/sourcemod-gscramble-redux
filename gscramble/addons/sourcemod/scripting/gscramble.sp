@@ -1201,7 +1201,6 @@ public QuerygameMEStatsCallback(command, payload, client, const total_cell_value
 		g_aPlayers[client][iGameMe_gRank] = global_cell_values[0];
 		g_aPlayers[client][iGameMe_gSkill] = global_cell_values[2];
 		g_aPlayers[client][iGameMe_SkillChange] = session_cell_values[1];
-		LogToFile("gscramble.debug", "DebugCode: Stats: %i %i %i %i %i", total_cell_values[0], total_cell_values[2], global_cell_values[0], global_cell_values[2], session_cell_values[1]);
 	}
 }
 
@@ -2676,7 +2675,6 @@ stock ScramblePlayers(e_ImmunityModes:immuneMode, e_ScrambleModes:scrambleMode)
 		SortCustom2D(_:scoreArray, iCount, SortScoreAsc);
 		for (i = 0; i < iCount; i++)
 		{
-			LogToFile("gscramble.debug", "After Sorting: %i", RoundFloat(scoreArray[i][0]));
 			iValidPlayers[i] = RoundFloat(scoreArray[i][0]);
 		}	
 	}
