@@ -991,15 +991,15 @@ hook()
 	HookEvent("teamplay_round_start", 		hook_Start, EventHookMode_PostNoCopy);
 	HookEvent("teamplay_round_win", 		hook_Win, EventHookMode_Post);
 	HookEvent("teamplay_setup_finished", 	hook_Setup, EventHookMode_PostNoCopy);
-	HookEvent("player_death", 				hook_Death, EventHookMode_Pre);
+	HookEvent("player_death", 				Event_PlayerDeath_Pre, EventHookMode_Pre);
 	HookEvent("game_start", 				hook_Event_GameStart);
 	HookEvent("teamplay_restart_round", 	hook_Event_TFRestartRound);
-	HookEvent("player_team",				hook_Event_player_team, EventHookMode_Pre);
+	HookEvent("player_team",				Event_PlayerTeam_Pre, EventHookMode_Pre);
 	HookEvent("teamplay_round_stalemate",	hook_RoundStalemate, EventHookMode_PostNoCopy);
 	HookEvent("teamplay_point_captured", 	hook_PointCaptured, EventHookMode_Post);
 	HookEvent("object_destroyed", 			hook_ObjectDestroyed, EventHookMode_Post);
 	HookEvent("teamplay_flag_event",		hook_FlagEvent, EventHookMode_Post);
-	HookUserMessage(GetUserMessageId("TextMsg"), UserMessageHook_Class, true);
+	HookUserMessage(GetUserMessageId("TextMsg"), UserMessageHook_Class, false);
 	HookEvent("teamplay_game_over", hook_GameEnd, EventHookMode_PostNoCopy);
 	HookEvent("player_chargedeployed", hook_UberDeploy, EventHookMode_Post);
 	HookEvent("player_sapped_object", hook_Sapper, EventHookMode_Post);
@@ -1015,16 +1015,16 @@ unHook()
 	UnhookEvent("teamplay_round_start", 		hook_Start, EventHookMode_PostNoCopy);
 	UnhookEvent("teamplay_round_win", 		hook_Win, EventHookMode_Post);
 	UnhookEvent("teamplay_setup_finished", 	hook_Setup, EventHookMode_PostNoCopy);
-	UnhookEvent("player_death", 				hook_Death, EventHookMode_Pre);
+	UnhookEvent("player_death", 				Event_PlayerDeath_Pre, EventHookMode_Pre);
 	UnhookEvent("game_start", 				hook_Event_GameStart);
 	UnhookEvent("teamplay_restart_round", 	hook_Event_TFRestartRound);
-	UnhookEvent("player_team",				hook_Event_player_team, EventHookMode_Pre);
+	UnhookEvent("player_team",				Event_PlayerTeam_Pre, EventHookMode_Pre);
 	UnhookEvent("teamplay_round_stalemate",	hook_RoundStalemate, EventHookMode_PostNoCopy);
 	UnhookEvent("teamplay_point_captured", 	hook_PointCaptured, EventHookMode_Post);
 	UnhookEvent("teamplay_game_over", hook_GameEnd, EventHookMode_PostNoCopy);
 	UnhookEvent("object_destroyed", hook_ObjectDestroyed, EventHookMode_Post);
 	UnhookEvent("teamplay_flag_event",		hook_FlagEvent, EventHookMode_Post);
-	UnhookUserMessage(GetUserMessageId("TextMsg"), UserMessageHook_Class, true);
+	UnhookUserMessage(GetUserMessageId("TextMsg"), UserMessageHook_Class, false);
 	UnhookEvent("player_chargedeployed", hook_UberDeploy, EventHookMode_Post);
 	UnhookEvent("player_sapped_object", hook_Sapper, EventHookMode_Post);
 	UnhookEvent("medic_death", hook_MedicDeath, EventHookMode_Post);
@@ -1139,28 +1139,12 @@ public hook_FlagEvent(Handle:event, const String:name[], bool:dontBroadcast)
 	AddTeamworkTime(GetEventInt(event, "player"));
 }
 
-public Action:hook_Event_player_team(Handle:event, const String:name[], bool:dontBroadcast)
+public Action:Event_PlayerTeam_Pre(Handle:event, const String:name[], bool:dontBroadcast)
 {
 	if (g_bBlockDeath)
 	{
-		if (!dontBroadcast)
-		{
-			new Handle:hEvent = CreateEvent("player_team"), String:clientName[MAX_NAME_LENGTH + 1], 
-				userId = GetEventInt(event, "userid"), client = GetClientOfUserId(userId);
-			if (hEvent != INVALID_HANDLE)
-			{
-				GetClientName(client, clientName, sizeof(clientName));
-				SetEventInt(hEvent, "userid", userId);
-				SetEventInt(hEvent, "team", GetEventInt(event, "team"));
-				SetEventInt(hEvent, "oldteam", GetEventInt(event, "oldteam"));
-				SetEventBool(hEvent, "disconnect", GetEventBool(event, "disconnect"));
-				SetEventBool(hEvent, "autoteam", GetEventBool(event, "autoteam"));
-				SetEventBool(hEvent, "silent", GetEventBool(event, "silent"));
-				SetEventString(hEvent, "name", clientName);
-				FireEvent(hEvent, true);
-			}
-		}
-		return Plugin_Handled;
+		SetEventBroadcast(event, true);
+		return Plugin_Continue;
 	}
 	CheckBalance(true);	
 	return Plugin_Continue;
@@ -1183,6 +1167,10 @@ public hook_Event_GameStart(Handle:event, const String:name[], bool:dontBroadcas
 
 public OnClientPutInServer(client)
 {
+	if (IsFakeClient(client))
+	{
+		return;
+	}
 	if (g_bUseGameMe && client > 0 && !IsFakeClient(client))
 	{
 		if (GetFeatureStatus(FeatureType_Native, "QueryGameMEStats") == FeatureStatus_Available)
@@ -2237,7 +2225,7 @@ bool:WinStreakCheck(winningTeam)
 	return false;
 }
 
-public Action:hook_Death(Handle:event, const String:name[], bool:dontBroadcast) 
+public Action:Event_PlayerDeath_Pre(Handle:event, const String:name[], bool:dontBroadcast) 
 {
 	if (g_bBlockDeath) 
 		return Plugin_Handled;
