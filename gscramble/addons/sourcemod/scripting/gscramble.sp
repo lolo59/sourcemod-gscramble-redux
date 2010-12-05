@@ -44,9 +44,10 @@ $Copyright: (c) TftTmng 2008-2011$
 #undef REQUIRE_PLUGIN
 #include <adminmenu>
 #include <gameme>
+#include <hlxce-sm-api>
 #define REQUIRE_PLUGIN
 
-#define VERSION "3.0.03b"
+#define VERSION "3.0.04b"
 #define TEAM_RED 2
 #define TEAM_BLUE 3
 #define SCRAMBLE_SOUND "vo/announcer_am_teamscramble03.wav"
@@ -166,6 +167,7 @@ new bool:g_bScrambleNextRound = false,
 	bool:g_bBlockJointeam,
 	bool:g_bNoSpec,
 	bool:g_bUseGameMe,
+	bool:g_bUseHlxCe,
 	/**
 	overrides the auto scramble check
 	*/
@@ -217,6 +219,8 @@ enum e_PlayerInfo
 	iGameMe_gRank,
 	iGameMe_gSkill,
 	iGameMe_SkillChange,
+	iHlxCe_Rank,
+	iHlxCe_Skill,
 };
 
 enum e_RoundState
@@ -264,6 +268,8 @@ enum e_ScrambleModes
 	gameMe_gRank,
 	gameMe_gSkill,
 	gameMe_SkillChange,
+	hlxCe_Rank,
+	hlxCe_Skill,
 	randomSort,
 }
 
@@ -322,7 +328,7 @@ public OnPluginStart()
 	cvar_VoteEnable 		= CreateConVar("gs_public_votes",	"1", 		"Enable/disable public voting", FCVAR_PLUGIN, true, 0.0, true, 1.0);
 	cvar_Punish				= CreateConVar("gs_punish_stackers", "0", 		"Punish clients trying to restack teams during the team-switch block period by adding time to when they are able to team swap again", FCVAR_PLUGIN, true, 0.0, true, 1.0);
 	cvar_SortMode			= CreateConVar("gs_sort_mode",		"1",		
-		"Player scramble sort mode.\n1 = Random\n2 = Player Score\n3 = Player Score Per Minute.\n4 = Kill-Death Ratio\n5 = Swap the top players on each team.\n6 = GameMe rank\n7 = GameMe skill\n8 Global GameMe rank\n9 = Global GameMe Skill\n10 = GameMe session skill change.\n11 = random mode.\nThis controls how players get swapped during a scramble.", FCVAR_PLUGIN, true, 1.0, true, 11.0);
+		"Player scramble sort mode.\n1 = Random\n2 = Player Score\n3 = Player Score Per Minute.\n4 = Kill-Death Ratio\n5 = Swap the top players on each team.\n6 = GameMe rank\n7 = GameMe skill\n8 Global GameMe rank\n9 = Global GameMe Skill\n10 = GameMe session skill change.\n11 = HlxCe Rank.\n12 = HlxCe Skill\n13 = random mode.\nThis controls how players get swapped during a scramble.", FCVAR_PLUGIN, true, 1.0, true, 11.0);
 	cvar_RandomSelections = CreateConVar("gs_random_selections", "0.55", "Percentage of players to swap during a random scramble", FCVAR_PLUGIN, true, 0.1, true, 0.80);
 	cvar_TopSwaps			= CreateConVar("gs_top_swaps",		"5",		"Number of top players the top-swap scramble will switch", FCVAR_PLUGIN, true, 1.0, false);
 	
@@ -688,6 +694,7 @@ public APLRes:AskPluginLoad2(Handle:myself, bool:late, String:error[], err_max)
 	}
 		
 	CreateNative("GS_IsClientTeamChangeBlocked", Native_GS_IsBlocked);
+	MarkNativeAsOptional("HLXCE_GetPlayerData");
 	MarkNativeAsOptional("QueryGameMEStats");
 	MarkNativeAsOptional("TF2_IsPlayerInDuel");
 	MarkNativeAsOptional("RegClientCookie");
@@ -1288,6 +1295,16 @@ public OnClientPostAdminCheck(client)
 	g_iVoters++;
 	g_iVotesNeeded = RoundToFloor(float(g_iVoters) * GetConVarFloat(cvar_PublicNeeded));
 	
+	if (g_bUseHlxCe && GetFeatureStatus(FeatureType_Native, "HLXCE_GetPlayerData") == FeatureStatus_Available)
+	{
+		HLXCE_GetPlayerData(client);
+	}
+}
+
+public HLXCE_OnGotPlayerData(client, const HLXCE_PlayerData:PData[])
+{
+	g_aPlayers[client][iHlxCe_Rank] = PData[PData_Rank];
+	g_aPlayers[client][iHlxCe_Skill] = PData[PData_Skill];
 }
 
 public OnClientCookiesCached(client)
@@ -2584,6 +2601,14 @@ Float:GetClientScrambleScore(client, e_ScrambleModes:mode)
 	{
 		return float(g_aPlayers[client][iGameMe_SkillChange]);
 	}
+	if (mode == hlxCe_Rank)
+	{
+		return float(g_aPlayers[client][iHlxCe_Rank]);
+	}
+	if (mode == hlxCe_Skill)
+	{
+		return float(g_aPlayers[client][iHlxCe_Skill]);
+	}
 	new Float:fScore = float(TF2_GetPlayerResourceData(client, TFResource_TotalScore));
 	fScore = FloatMul(fScore, fScore);
 	if (!IsFakeClient(client))
@@ -3341,6 +3366,14 @@ public OnLibraryRemoved(const String:name[])
 {
 	if (StrEqual(name, "adminmenu"))		
 		g_hAdminMenu = INVALID_HANDLE;
+	if (StrEqual(name, "hlxce-sm-api"))
+		g_bUseHlxCe = false;
+}
+
+public OnLibraryAdded(const String:name[])
+{
+	if (StrEqual(name, "hlxce-sm-api"))
+		g_bUseHlxCe = true;
 }
 
 public OnAdminMenuReady(Handle:topmenu)
@@ -3573,7 +3606,12 @@ public Handle_RespawnMenu(Handle:scrambleResetMenu, MenuAction:action, client, p
 				AddMenuItem(modeSelectMenu, "9", "Use GameME Global Skill");
 				AddMenuItem(modeSelectMenu, "10", "Use GameME Session Skill Change");
 			}
-			AddMenuItem(modeSelectMenu, "11", "Random Sort-Mode");
+			if (g_bUseHlxCe)
+			{
+				AddMenuItem(modeSelectMenu, "11", "Use HlxCe Rank");
+				AddMenuItem(modeSelectMenu, "12", "Use HlxCe Skill");
+			}
+			AddMenuItem(modeSelectMenu, "13", "Random Sort-Mode");
 			DisplayMenu(modeSelectMenu, client, MENU_TIME_FOREVER);
 		}
 		
