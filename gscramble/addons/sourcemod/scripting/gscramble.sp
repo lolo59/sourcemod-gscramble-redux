@@ -2966,6 +2966,13 @@ public Action:timer_ScrambleDelay(Handle:timer, any:data)  // scramble logic
 			iHigh = 10;
 		}
 		scrambleMode = e_ScrambleModes:(GetRandomInt(1,iHigh));
+		if (g_bUseHlxCe)
+		{
+			if (GetRandomInt(0,1))
+			{
+				GetRandomInt(0,1) ? (scrambleMode = hlxCe_Skill):(scrambleMode = hlxCe_Rank);
+			}
+		}
 	}
 	ScramblePlayers(immuneMode, scrambleMode);
 	
