@@ -328,7 +328,7 @@ public OnPluginStart()
 	cvar_VoteEnable 		= CreateConVar("gs_public_votes",	"1", 		"Enable/disable public voting", FCVAR_PLUGIN, true, 0.0, true, 1.0);
 	cvar_Punish				= CreateConVar("gs_punish_stackers", "0", 		"Punish clients trying to restack teams during the team-switch block period by adding time to when they are able to team swap again", FCVAR_PLUGIN, true, 0.0, true, 1.0);
 	cvar_SortMode			= CreateConVar("gs_sort_mode",		"1",		
-		"Player scramble sort mode.\n1 = Random\n2 = Player Score\n3 = Player Score Per Minute.\n4 = Kill-Death Ratio\n5 = Swap the top players on each team.\n6 = GameMe rank\n7 = GameMe skill\n8 Global GameMe rank\n9 = Global GameMe Skill\n10 = GameMe session skill change.\n11 = HlxCe Rank.\n12 = HlxCe Skill\n13 = random mode.\nThis controls how players get swapped during a scramble.", FCVAR_PLUGIN, true, 1.0, true, 11.0);
+		"Player scramble sort mode.\n1 = Random\n2 = Player Score\n3 = Player Score Per Minute.\n4 = Kill-Death Ratio\n5 = Swap the top players on each team.\n6 = GameMe rank\n7 = GameMe skill\n8 Global GameMe rank\n9 = Global GameMe Skill\n10 = GameMe session skill change.\n11 = HlxCe Rank.\n12 = HlxCe Skill\n13 = random mode.\nThis controls how players get swapped during a scramble.", FCVAR_PLUGIN, true, 1.0, true, 13.0);
 	cvar_RandomSelections = CreateConVar("gs_random_selections", "0.55", "Percentage of players to swap during a random scramble", FCVAR_PLUGIN, true, 0.1, true, 0.80);
 	cvar_TopSwaps			= CreateConVar("gs_top_swaps",		"5",		"Number of top players the top-swap scramble will switch", FCVAR_PLUGIN, true, 1.0, false);
 	
