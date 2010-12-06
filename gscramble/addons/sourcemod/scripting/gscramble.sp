@@ -47,7 +47,7 @@ $Copyright: (c) TftTmng 2008-2011$
 #include <hlxce-sm-api>
 #define REQUIRE_PLUGIN
 
-#define VERSION "3.0.04b"
+#define VERSION "3.0.05b"
 #define TEAM_RED 2
 #define TEAM_BLUE 3
 #define SCRAMBLE_SOUND "vo/announcer_am_teamscramble03.wav"
@@ -1486,8 +1486,8 @@ Float:GetAvgScoreDifference(team)
 				otherScores += TF2_GetPlayerResourceData(i, TFResource_TotalScore);
 		}
 	}
-	teamAvg = float(teamScores) / float(GetTeamClientCount(team));
-	otherAvg = float(otherScores) / float(GetTeamClientCount(team == TEAM_RED ? TEAM_BLUE : TEAM_RED));
+	teamAvg = FloatDiv(float(teamScores),float(GetTeamClientCount(team)));
+	otherAvg = FloatDiv(float(otherScores), float(GetTeamClientCount(team == TEAM_RED ? TEAM_BLUE : TEAM_RED)));
 	if (otherAvg > teamAvg)
 		return 0.0;
 	return FloatAbs(teamAvg - otherAvg);
@@ -2459,7 +2459,7 @@ bool:IsValidTarget(client, e_ImmunityModes:mode)
 {
 	if (IsFakeClient(client))
 	{
-		return true;
+		return GetRandomInt(0,1) ? true:false;
 	}
 	if ((GetFeatureStatus(FeatureType_Native, "TF2_IsPlayerInDuel") == FeatureStatus_Available) && TF2_IsPlayerInDuel(client))
 	{
@@ -2621,7 +2621,7 @@ stock ScramblePlayers(e_ImmunityModes:immuneMode, e_ScrambleModes:scrambleMode)
 		return;
 	}
 	new i, iCount, iRedImmune, iBluImmune, iSwaps, iTempTeam,
-		bool:bRed, iImmuneTeam, iImmuneDiff, client;
+		bool:bToRed, iImmuneTeam, iImmuneDiff, client;
 	new iValidPlayers[GetClientCount()];
 	
 	/**
@@ -2644,11 +2644,11 @@ stock ScramblePlayers(e_ImmunityModes:immuneMode, e_ScrambleModes:scrambleMode)
 	}
 	if (g_iLastRoundWinningTeam)
 	{
-		bRed = g_iLastRoundWinningTeam == TEAM_BLUE;
+		bToRed = g_iLastRoundWinningTeam == TEAM_BLUE;
 	}
 	else
 	{
-		bRed = GetRandomInt(0,1) == 0;
+		bToRed = GetRandomInt(0,1) == 0;
 	}
 	/**
 	handle imbalance in imune teams
@@ -2656,16 +2656,16 @@ stock ScramblePlayers(e_ImmunityModes:immuneMode, e_ScrambleModes:scrambleMode)
 	*/
 	if (iRedImmune != iBluImmune)
 	{
-		if ((iImmuneDiff = iRedImmune - iBluImmune) > 0)
+		if ((iImmuneDiff = (iRedImmune - iBluImmune)) > 0)
 		{
 			iImmuneTeam = TEAM_RED;
 		}
 		else
 		{
-			iImmuneDiff *= -1;
+			iImmuneDiff = RoundFloat(FloatAbs(float(iImmuneDiff)));
 			iImmuneTeam = TEAM_BLUE;
 		}
-		bRed = iImmuneTeam == TEAM_BLUE;
+		bToRed = iImmuneTeam == TEAM_BLUE;
 	}
 	
 	/**
@@ -2678,8 +2678,7 @@ stock ScramblePlayers(e_ImmunityModes:immuneMode, e_ScrambleModes:scrambleMode)
 		{
 			scoreArray[i][0] = float(iValidPlayers[i]);
 			scoreArray[i][1] = GetClientScrambleScore(iValidPlayers[i], scrambleMode);
-		}
-		
+		}		
 		
 		/** 
 		now sort score descending 
@@ -2701,7 +2700,7 @@ stock ScramblePlayers(e_ImmunityModes:immuneMode, e_ScrambleModes:scrambleMode)
 	}
 	g_bBlockDeath = true;
 	new iTemp = iSwaps;
-	iImmuneTeam == TEAM_RED ? (bRed = false):(bRed = true);
+	iImmuneTeam == TEAM_RED ? (bToRed = false):(bToRed = true);
 	for (i = iTemp; i < iCount; i++)
 	{
 		client = iValidPlayers[i];
@@ -2713,8 +2712,8 @@ stock ScramblePlayers(e_ImmunityModes:immuneMode, e_ScrambleModes:scrambleMode)
 		else
 		{
 			iTempTeam = GetClientTeam(client);
-			ChangeClientTeam(client, bRed ? TEAM_RED:TEAM_BLUE);
-			bRed = !bRed;
+			ChangeClientTeam(client, bToRed ? TEAM_RED:TEAM_BLUE);
+			bToRed = !bToRed;
 		}
 		if (GetClientTeam(client) != iTempTeam)
 		{
@@ -2735,7 +2734,7 @@ stock DoRandomSort(array[], count)
 		iBluValidCount,
 		iBluCount = GetTeamClientCount(TEAM_BLUE),
 		iRedCount = GetTeamClientCount(TEAM_RED),
-		iTeamAdd, iDiff,
+		iTeamDiff, iLargerTeam, iAddToLarger,
 		Float:fSelections = GetConVarFloat(cvar_RandomSelections);
 	new aReds[count][2],
 		aBlus[count][2];
@@ -2756,43 +2755,48 @@ stock DoRandomSort(array[], count)
 			iBluValidCount++;
 		}
 	}
-	if (iBluCount > iRedCount)
+	iRedSelections = RoundToFloor(FloatDiv(FloatMul(fSelections, (float(iRedCount) + float(iBluCount))), 2.0));
+	iBluSelections = iRedSelections;
+	if ((iTeamDiff = RoundFloat(FloatAbs(FloatSub(float(iRedCount),float(iBluCount))))) >= 2)
 	{
-		iDiff = iBluCount - iRedCount; 
-		iRedSelections = RoundToCeil(FloatMul(fSelections, float(iRedCount)));
-		iTeamAdd = RoundToFloor(FloatDiv(float(iDiff), 2.0));
-		iBluSelections += iTeamAdd;
+		iLargerTeam = GetLargerTeam();
+		iAddToLarger = iTeamDiff / 2;
+		iLargerTeam == TEAM_RED ? (iRedSelections += iAddToLarger):(iBluSelections+=iAddToLarger);
 	}
-	else if (iRedCount > iBluCount)
+	if (iRedSelections > iRedValidCount || iBluSelections > iBluValidCount)
 	{
-		iDiff = iRedCount - iBluCount;
-		iBluSelections = RoundToCeil(FloatMul(fSelections, float(iBluCount)));
-		iTeamAdd = RoundToFloor(FloatDiv(float(iDiff), 2.0));
-		iRedSelections = iBluSelections += iTeamAdd;
-	}
-	else 
-	{
-		iBluSelections = RoundToCeil(FloatMul(fSelections, float(iBluCount)));
-		iRedSelections = iBluSelections;
-	}
-	if (iRedSelections > iRedValidCount)
-	{
-		iRedSelections = iRedValidCount;
-	}
-	if (iBluSelections > iBluValidCount)
-	{
-		iBluSelections = iBluValidCount;
-	}
-	if (iTeamAdd)
-	{
-		if (iRedCount > iBluCount)
+		if (iRedValidCount > iBluValidCount)
 		{
-			iBluSelections -= iTeamAdd;
+			iRedSelections = iBluValidCount;
+		}
+		else if (iBluValidCount > iRedValidCount)
+		{
+			iBluSelections = iRedValidCount;
 		}
 		else
 		{
-			iRedSelections -=  iTeamAdd;
+			iRedSelections = iRedValidCount;
+			iBluSelections = iBluValidCount;
 		}
+		new iTestRed, iTestBlu, iTestDiff;
+		iTestBlu -= iBluSelections;
+		iTestBlu += iRedSelections;
+		iTestRed -= iRedSelections;
+		iTestRed += iBluSelections;
+		iTestDiff = RoundFloat(FloatAbs(FloatSub(float(iTestRed), float(iTestBlu))));
+		iTestDiff /= 2;
+		if (iTestDiff >= 1)
+		{
+			if (iTestRed > iTestBlu)
+			{
+				iBluSelections -= iTestDiff;
+			}
+			else
+			{
+				iRedSelections -= iTestDiff;
+			}
+		}
+	
 	}
 	SelectRandom(aReds, iRedValidCount, iRedSelections);
 	SelectRandom(aBlus, iBluValidCount, iBluSelections);
