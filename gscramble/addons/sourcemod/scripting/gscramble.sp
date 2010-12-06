@@ -161,7 +161,6 @@ new bool:g_bScrambleNextRound = false,
 	bool:g_bNoSequentialScramble,
 	bool:g_bScrambledThisRound,
 	bool:g_bBlockDeath,
-	bool:g_bAutoVote,
 	bool:g_bUseBuddySystem,
 	bool:g_bSilent,
 	bool:g_bBlockJointeam,
@@ -242,7 +241,6 @@ enum ScrambleTime
 
 enum e_ImmunityModes
 {
-	autoScramble,
 	scramble,
 	balance,
 };
@@ -472,7 +470,7 @@ public Action:CMD_Listener(client, const String:command[], argc)
 				} 
 				if (IsBlocked(client))
 				{
-					if (g_aTeams[bImbalanced] && (StrEqual(sArg, "blue", false) || StrEqual(sArg, "red", false) || StringToInt(sArg) >= 2))
+					if (TeamsUnbalanced(false) && (StrEqual(sArg, "blue", false) || StrEqual(sArg, "red", false) || StringToInt(sArg) >= 2))
 					{
 						/**
 						allow clients to change teams during imbalances
@@ -1361,7 +1359,6 @@ public OnMapStart()
 	* reset most of what we track with this plugin
 	* team wins, frags, gamestate... ect
 	*/
-	g_bAutoVote = false;
 	g_bScrambledThisRound = false;
 	g_bScrambleOverride = false;
 	g_iRoundTrigger = 0;
@@ -1524,7 +1521,7 @@ BalanceTeams(bool:respawn=true)
 		{
 			if (GetConVarBool(cvar_Preference) && g_aPlayers[i][iTeamPreference] == smallTeam && !TF2_IsClientUbered(i))				
 				iFatTeam[counter][1] = 3;			
-			else if (IsValidTarget(i, e_ImmunityModes:balance))
+			else if (IsValidTarget(i, balance))
 				iFatTeam[counter][1] = GetPlayerPriority(i);
 			else
 				iFatTeam[counter][1] = -5;
@@ -1639,7 +1636,7 @@ PerformScrambleNow(client, Float:fDelay = 5.0, bool:respawn = false, e_ScrambleM
 	}
 	LogAction(client, -1, "\"%L\" performed the scramble command", client);
 	ShowActivity(client, "%t", "AdminScrambleNow");
-	StartScrambleDelay(fDelay, false, respawn, mode);
+	StartScrambleDelay(fDelay, respawn, mode);
 }
 
 AttemptScrambleVote(client)
@@ -1725,7 +1722,7 @@ AttemptScrambleVote(client)
 			PrintToChatAll("\x01\x04[SM]\x01 %t", "ScrambleRound");			
 		}
 		else if (!Override && GetConVarInt(cvar_VoteMode) == 2)
-			StartScrambleDelay(5.0, false, true);	
+			StartScrambleDelay(5.0, true);	
 		DelayPublicVoteTriggering();
 	}
 }	
@@ -1801,7 +1798,7 @@ PerformVote(client, ScrambleTime:mode)
 	StartScrambleVote(mode, 20);
 }
 
-StartScrambleVote(ScrambleTime:mode, time=20, bool:auto = false)
+StartScrambleVote(ScrambleTime:mode, time=20)
 {
 	if (IsVoteInProgress())
 	{
@@ -1827,8 +1824,6 @@ StartScrambleVote(ScrambleTime:mode, time=20, bool:auto = false)
 	AddMenuItem(g_hScrambleVoteMenu, VOTE_NO, "No");
 	SetMenuExitButton(g_hScrambleVoteMenu, false);
 	VoteMenuToAll(g_hScrambleVoteMenu, time);
-	if (auto)
-		g_bAutoVote = true;
 }
 
 public Action:Timer_ScrambleVoteStarter(Handle:timer, any:mode)
@@ -1884,7 +1879,7 @@ public Handler_VoteCallback(Handle:menu, MenuAction:action, param1, param2)
 			LogAction(-1 , 0, "%T", "VoteWin", LANG_SERVER, RoundToNearest(comp*100), totalVotes);			
 			if (g_bScrambleAfterVote)
 			{
-				StartScrambleDelay(5.0, g_bAutoVote, true);
+				StartScrambleDelay(5.0, true);
 			}
 			else
 			{
@@ -1902,7 +1897,6 @@ public Handler_VoteCallback(Handle:menu, MenuAction:action, param1, param2)
 			LogAction(-1 , 0, "%T", "VoteFailed", LANG_SERVER, against, totalVotes);
 		}
 	}
-	g_bAutoVote = false;
 	return 0;
 }
 
@@ -2049,7 +2043,7 @@ public hook_Start(Handle:event, const String:name[], bool:dontBroadcast)
 		if (WinStreakCheck(g_iLastRoundWinningTeam) || (!g_bScrambleOverride && g_bAutoScramble && AutoScrambleCheck(g_iLastRoundWinningTeam)))
 		{
 			if (GetConVarBool(cvar_AutoscrambleVote))
-				StartScrambleVote(g_iDefMode, 15, true);
+				StartScrambleVote(g_iDefMode, 15);
 			else			
 				g_bScrambleNextRound = true;
 		}		
@@ -2062,7 +2056,7 @@ public hook_Start(Handle:event, const String:name[], bool:dontBroadcast)
 		new rounds = GetConVarInt(cvar_Rounds);
 		if (rounds)
 			g_iRoundTrigger += rounds;
-		StartScrambleDelay(0.0, false, true);
+		StartScrambleDelay(0.0);
 	}
 	else if (GetConVarBool(cvar_ForceBalance) && g_hForceBalanceTimer == INVALID_HANDLE)
 	{
@@ -2459,14 +2453,14 @@ bool:IsValidTarget(client, e_ImmunityModes:mode)
 {
 	if (IsFakeClient(client))
 	{
-		return GetRandomInt(0,1) ? true:false;
+		return true;
 	}
-	if ((GetFeatureStatus(FeatureType_Native, "TF2_IsPlayerInDuel") == FeatureStatus_Available) && TF2_IsPlayerInDuel(client))
+	if (mode == balance && (GetFeatureStatus(FeatureType_Native, "TF2_IsPlayerInDuel") == FeatureStatus_Available) && TF2_IsPlayerInDuel(client))
 	{
 		return false;
 	}
 	// next check for buddies. if the buddy is on the wrong team, we skip the rest of the immunity checks
-	if (g_bUseBuddySystem)
+	if (g_bUseBuddySystem && mode == balance)
 	{
 		new buddy;
 		if ((buddy = g_aPlayers[client][iBuddy]))
@@ -2502,7 +2496,7 @@ bool:IsValidTarget(client, e_ImmunityModes:mode)
 		if the round started within 10 seconds, override immunity too
 	*/
 	new iStart = GetTime() - g_iSpawnTime;
-	if (iStart <= 10 || mode == autoScramble || (g_RoundState != normal && g_RoundState != setup))
+	if (iStart <= 10 || mode == scramble || (g_RoundState != normal && g_RoundState != setup))
 	{
 		if (iImmunity == both)
 			iImmunity = admin;
@@ -2935,11 +2929,8 @@ public Action:timer_ScrambleDelay(Handle:timer, any:data)  // scramble logic
 	g_bScrambledThisRound = true;
 	new e_ImmunityModes:immuneMode = scramble;
 	ResetPack(data);
-	new iAuto = ReadPackCell(data),
-		respawn = ReadPackCell(data),
+	new respawn = ReadPackCell(data),
 		e_ScrambleModes:scrambleMode = e_ScrambleModes:ReadPackCell(data);
-	if (iAuto)
-		immuneMode = autoScramble;
 	g_aTeams[iRedWins] = 0;
 	g_aTeams[iBluWins] = 0;
 	g_aTeams[bImbalanced] = false;	
@@ -3128,7 +3119,7 @@ SetupTeamSwapBlock(client)  /* blocks proper clients from spectating*/
 	g_aPlayers[client][iBlockTime] = GetTime() + g_iForceTime;
 }
 
-stock StartScrambleDelay(Float:delay = 5.0, bool:auto = false, bool:respawn = false, e_ScrambleModes:mode = random)
+stock StartScrambleDelay(Float:delay = 5.0, bool:respawn = false, e_ScrambleModes:mode = random)
 {
 	if (g_hScrambleDelay != INVALID_HANDLE)
 	{
@@ -3140,7 +3131,6 @@ stock StartScrambleDelay(Float:delay = 5.0, bool:auto = false, bool:respawn = fa
 	
 	new Handle:data;
 	g_hScrambleDelay = CreateDataTimer(delay, timer_ScrambleDelay, data, TIMER_FLAG_NO_MAPCHANGE|TIMER_DATA_HNDL_CLOSE );
-	WritePackCell(data, auto);
 	WritePackCell(data, respawn);
 	WritePackCell(data, _:mode);
 	if (delay == 0.0)
