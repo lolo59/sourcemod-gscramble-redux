@@ -47,15 +47,12 @@ $Copyright: (c) TftTmng 2008-2011$
 #include <hlxce-sm-api>
 #define REQUIRE_PLUGIN
 
-#define VERSION "3.0.07b"
+#define VERSION "3.0.08b"
 #define TEAM_RED 2
 #define TEAM_BLUE 3
 #define SCRAMBLE_SOUND "vo/announcer_am_teamscramble03.wav"
 #define EVEN_SOUND		"vo/announcer_am_teamscramble01.wav"
 
-#define VOTE_NAME		0
-#define VOTE_NO 		"###no###"
-#define VOTE_YES 		"###yes###"
 
 /**
 cvar handles
@@ -141,6 +138,8 @@ new Handle:g_cookie_timeBlocked 	= INVALID_HANDLE,
 	Handle:g_cookie_teamIndex		= INVALID_HANDLE,
 	Handle:g_cookie_serverIp		= INVALID_HANDLE;
 
+new String:g_sVoteCommands[3][65];
+
 new bool:g_bScrambleNextRound = false,	
 	bool:g_bVoteAllowed, 			
 	bool:g_bScrambleAfterVote,			
@@ -167,13 +166,13 @@ new bool:g_bScrambleNextRound = false,
 	bool:g_bNoSpec,
 	bool:g_bUseGameMe,
 	bool:g_bUseHlxCe,
+	bool:g_bVoteCommandCreated,
 	/**
 	overrides the auto scramble check
 	*/
 	bool:g_bScrambleOverride;  // allows for the scramble check to be blocked by admin
 
-new String:g_sVoteInfo[3][65],
-	g_iTeamIds[2] = {TEAM_RED, TEAM_BLUE};
+new g_iTeamIds[2] = {TEAM_RED, TEAM_BLUE};
 
 new	g_iMapStartTime,
 	g_iRoundStartTime,
@@ -388,6 +387,7 @@ public OnPluginStart()
 		
 	g_iVoters = GetClientCount(false);
 	g_iVotesNeeded = RoundToFloor(float(g_iVoters) * GetConVarFloat(cvar_PublicNeeded));
+	g_bVoteCommandCreated = false;
 
 }
 
@@ -418,7 +418,6 @@ RegCommands()
 	RegAdminCmd("sm_forcebalance",	cmd_Balance, ADMFLAG_GENERIC, "Forces a team balance if an imbalance exists.");
 	RegAdminCmd("sm_scramblevote",	cmd_Vote, ADMFLAG_GENERIC, "Start a vote. sm_scramblevote <now/end>");
 	
-	AddCommandListener(CMD_Listener, "say");
 	AddCommandListener(CMD_Listener, "say_team");
 	AddCommandListener(CMD_Listener, "jointeam");
 	AddCommandListener(CMD_Listener, "spectate");
@@ -493,32 +492,6 @@ public Action:CMD_Listener(client, const String:command[], argc)
 				}
 			}
 		}
-	}
-	else if (StrContains(command, "say", false) != -1)
-	{
-		if (!client)
-		{
-			return Plugin_Continue;
-		}
-		decl String:text[192];
-		if (!GetCmdArgString(text, sizeof(text)))
-		{
-			return Plugin_Continue;
-		}
-		new startidx = 0, String:sTrigger[33];
-		GetConVarString(cvar_VoteCommand, sTrigger, sizeof(sTrigger));
-		if(text[strlen(text)-1] == '"')
-		{
-			text[strlen(text)-1] = '\0';
-			startidx = 1;
-		}	
-		new ReplySource:old = SetCmdReplySource(SM_REPLY_TO_CHAT);	
-		if (strcmp(text[startidx], sTrigger, false) == 0)
-		{
-			AttemptScrambleVote(client);
-		}
-		SetCmdReplySource(old);		
-		return Plugin_Continue;		
 	}
 	return Plugin_Continue;
 }
@@ -721,8 +694,36 @@ public Native_GS_IsBlocked(Handle:plugin, numParams)
 	return false;
 }
 
+stock CreateVoteCommand()
+{
+	if (!g_bVoteCommandCreated)
+	{
+		decl String:sCommand[256];		
+		GetConVarString(cvar_VoteCommand, sCommand, sizeof(sCommand));
+		ExplodeString(sCommand, ",", g_sVoteCommands, 3, sizeof(g_sVoteCommands[]));
+		for (new i; i < 3; i++)
+		{
+			if (strlen(g_sVoteCommands[i]) > 2)
+			{
+				g_bVoteCommandCreated = true;
+				RegConsoleCmd(g_sVoteCommands[i], CMD_VoteTrigger);
+			}
+		}		
+	}
+}
+
+public Action:CMD_VoteTrigger(client, args)
+{
+	if (!IsFakeClient(client))
+	{
+		AttemptScrambleVote(client);
+	}
+	return Plugin_Handled;
+}
+
 public OnConfigsExecuted()
 {
+	CreateVoteCommand();
 	if (FindConVar("gameme_plugin_version") != INVALID_HANDLE && GetFeatureStatus(FeatureType_Native, "QueryGameMEStats") == FeatureStatus_Available)
 	{
 		LogMessage("GameMe Available");
@@ -858,9 +859,23 @@ public OnConfigsExecuted()
 
 public Action:Timer_VoteAd(Handle:timer)
 {
-	decl String:sAd[33];
-	GetConVarString(cvar_VoteCommand, sAd, sizeof(sAd));
-	PrintToChatAll("\x01\x04[SM]\x01 %t", "VoteAd", sAd);
+	decl String:sVotes[120];
+	if (strlen(g_sVoteCommands[0]))
+	{
+		Format(sVotes, sizeof(sVotes), "!%s", g_sVoteCommands[0]);
+	}
+	if (strlen(g_sVoteCommands[1]))
+	{
+		Format(sVotes, sizeof(sVotes), "%s, !%s", sVotes, g_sVoteCommands[1]);
+	}
+	if (strlen(g_sVoteCommands[2]))
+	{
+		Format(sVotes, sizeof(sVotes), "%s, or !%s", sVotes, g_sVoteCommands[2]);
+	}
+	if (strlen(sVotes))
+	{
+		PrintToChatAll("\x01\x04[SM]\x01 %t", "VoteAd", sVotes);
+	}
 	return Plugin_Continue;
 }
 
@@ -1804,8 +1819,8 @@ StartScrambleVote(ScrambleTime:mode, time=20)
 		Format(sTmpTitle, 64, "Scramble Teams Next Round?");
 	}
 	SetMenuTitle(g_hScrambleVoteMenu, sTmpTitle);
-	AddMenuItem(g_hScrambleVoteMenu, VOTE_YES, "Yes");
-	AddMenuItem(g_hScrambleVoteMenu, VOTE_NO, "No");
+	AddMenuItem(g_hScrambleVoteMenu, "1", "Yes");
+	AddMenuItem(g_hScrambleVoteMenu, "2", "No");
 	SetMenuExitButton(g_hScrambleVoteMenu, false);
 	VoteMenuToAll(g_hScrambleVoteMenu, time);
 }
@@ -1822,31 +1837,7 @@ public Handler_VoteCallback(Handle:menu, MenuAction:action, param1, param2)
 {
 	DelayPublicVoteTriggering();
 	if (action == MenuAction_End)
-		VoteMenuClose();	
-	else if (action == MenuAction_Display)
-	{
-		decl String:title[64];
-		GetMenuTitle(menu, title, sizeof(title));		
-		decl String:buffer[255];
-		Format(buffer, sizeof(buffer), "%s %s", title, "");
-		new Handle:panel = Handle:param2;
-		SetPanelTitle(panel, buffer);
-	}	
-	else if (action == MenuAction_DisplayItem)
-	{
-		decl String:display[64];
-		GetMenuItem(menu, param2, "", 0, _, display, sizeof(display));	 
-	 	if (strcmp(display, "VOTE_NO") == 0 || strcmp(display, "VOTE_YES") == 0)
-	 	{
-			decl String:title[64];
-			GetMenuTitle(menu, title, sizeof(title));		
-			decl String:buffer[255];
-			Format(buffer, sizeof(buffer), "%s %s", title, g_sVoteInfo[VOTE_NAME]);
-			return RedrawMenuItem(buffer);
-		}
-	}
-	else if (action == MenuAction_VoteCancel && param1 == VoteCancel_NoVotes)
-		PrintToChatAll("\x01\x04[SM]\x01 %t", "No Votes Cast");	
+		VoteMenuClose();		
 	else if (action == MenuAction_VoteEnd)
 	{	
 		new m_votes, totalVotes;		
