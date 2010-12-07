@@ -76,12 +76,12 @@ new Handle:cvar_Version				= INVALID_HANDLE,
 	Handle:cvar_VoteMode			= INVALID_HANDLE,
 	Handle:cvar_PublicNeeded		= INVALID_HANDLE,
 	Handle:cvar_FullRoundOnly		= INVALID_HANDLE,
-	Handle:cvar_WinStreak			= INVALID_HANDLE,
+	Handle:cvar_AutoScrambleWinStreak			= INVALID_HANDLE,
 	Handle:cvar_SortMode			= INVALID_HANDLE,
-	Handle:cvar_AdminImmune			= INVALID_HANDLE,
+	Handle:cvar_TeamSwapBlockImmunity			= INVALID_HANDLE,
 	Handle:cvar_MenuVoteEnd			= INVALID_HANDLE,
 	Handle:cvar_AutoscrambleVote	= INVALID_HANDLE,
-	Handle:cvar_ScrambleAdminImmune	= INVALID_HANDLE,
+	Handle:cvar_ScrambleImmuneMode	= INVALID_HANDLE,
 	Handle:cvar_Punish				= INVALID_HANDLE,
 	Handle:cvar_Balancer			= INVALID_HANDLE,
 	Handle:cvar_BalanceTime			= INVALID_HANDLE,
@@ -102,7 +102,7 @@ new Handle:cvar_Version				= INVALID_HANDLE,
 	Handle:cvar_ScrambleAdmFlags	= INVALID_HANDLE,
 	Handle:cvar_TeamswapAdmFlags	= INVALID_HANDLE,
 	Handle:cvar_Koth				= INVALID_HANDLE,
-	Handle:cvar_Rounds				= INVALID_HANDLE,
+	Handle:cvar_AutoScrambleRoundCount				= INVALID_HANDLE,
 	Handle:cvar_ForceReconnect		= INVALID_HANDLE,
 	Handle:cvar_TeamworkProtect		= INVALID_HANDLE,
 	Handle:cvar_BalanceActionDelay	= INVALID_HANDLE,
@@ -311,8 +311,8 @@ public OnPluginStart()
 	
 	cvar_TeamworkProtect	= CreateConVar("gs_teamwork_protect", "60",		"Time in seconds to protect a client from autobalance if they have recently captured a point, defended/touched intelligence, or assisted in or destroying an enemy sentry. 0 = disabled", FCVAR_PLUGIN, true, 0.0, false);
 	cvar_ForceBalance 		= CreateConVar("gs_force_balance",	"0", 		"Force a balance between each round. (If you use a custom team balance plugin that doesn't do this already, or you have the default one disabled)", FCVAR_PLUGIN, true, 0.0, true, 1.0);
-	cvar_AdminImmune		= CreateConVar("gs_teamswitch_immune",	"1",	"Sets if admins (root and ban) are immune from team swap blocking", FCVAR_PLUGIN, true, 0.0, true, 1.0);
-	cvar_ScrambleAdminImmune = CreateConVar("gs_scramble_immune", "0",		"Sets if admins and people with uber and engie buildings are immune from being scrambled.\n0 = no immunity\n1 = just admins\n2 = charged medics + engineers with buildings\n3 = admins + charged medics and engineers with buildings.", FCVAR_PLUGIN, true, 0.0, true, 3.0);
+	cvar_TeamSwapBlockImmunity = CreateConVar("gs_teamswitch_immune",	"1",	"Sets if admins (root and ban) are immune from team swap blocking", FCVAR_PLUGIN, true, 0.0, true, 1.0);
+	cvar_ScrambleImmuneMode = CreateConVar("gs_scramble_immune", "0",		"Sets if admins and people with uber and engie buildings are immune from being scrambled.\n0 = no immunity\n1 = just admins\n2 = charged medics + engineers with buildings\n3 = admins + charged medics and engineers with buildings.", FCVAR_PLUGIN, true, 0.0, true, 3.0);
 	cvar_SetupRestore		= CreateConVar("gs_setup_reset",	"1", 		"If a scramble happens during setup, restore the setup timer to its starting value", FCVAR_PLUGIN, true, 0.0, true, 1.0);
 	cvar_ScrambleAdmFlags	= CreateConVar("gs_flags_scramble", "ab",		"Admin flags for scramble protection (if enabled)", FCVAR_PLUGIN);
 	cvar_BalanceAdmFlags	= CreateConVar("gs_flags_balance",	"ab",		"Admin flags for balance protection (if enabled)", FCVAR_PLUGIN);
@@ -342,8 +342,8 @@ public OnPluginStart()
 	
 	cvar_MinPlayers 		= CreateConVar("gs_vote_minplayers",	"6", 		"Minimum poeple connected before any voting will work.", FCVAR_PLUGIN, true, 0.0, false);
 	
-	cvar_WinStreak			= CreateConVar("gs_winstreak",		"0", 		"If set, it will scramble after a team wins X full rounds in a row", FCVAR_PLUGIN, true, 0.0, false);
-	cvar_Rounds				= CreateConVar("gs_scramblerounds", "0",		"If set, it will scramble every X full round", FCVAR_PLUGIN, true, 0.0, false, 1.0);
+	cvar_AutoScrambleWinStreak			= CreateConVar("gs_winstreak",		"0", 		"If set, it will scramble after a team wins X full rounds in a row", FCVAR_PLUGIN, true, 0.0, false);
+	cvar_AutoScrambleRoundCount				= CreateConVar("gs_scramblerounds", "0",		"If set, it will scramble every X full round", FCVAR_PLUGIN, true, 0.0, false, 1.0);
 	
 	cvar_AutoScramble		= CreateConVar("gs_autoscramble",	"1", 		"Enables/disables the automatic scrambling.", FCVAR_PLUGIN, true, 0.0, true, 1.0);
 	cvar_FullRoundOnly 		= CreateConVar("gs_as_fullroundonly",	"0",		"Auto-scramble only after a full round has completed.", FCVAR_PLUGIN, true, 0.0, true, 1.0);
@@ -384,8 +384,7 @@ public OnPluginStart()
 	LoadTranslations("common.phrases");
 	LoadTranslations("gscramble.phrases");
 		
-	CheckEstensions();
-	
+	CheckEstensions();	
 		
 	g_iVoters = GetClientCount(false);
 	g_iVotesNeeded = RoundToFloor(float(g_iVoters) * GetConVarFloat(cvar_PublicNeeded));
@@ -438,7 +437,7 @@ public Action:CMD_Listener(client, const String:command[], argc)
 			
 			if (g_bBlockJointeam)
 			{
-				if (GetConVarBool(cvar_AdminImmune))
+				if (GetConVarBool(cvar_TeamSwapBlockImmunity))
 				{				
 					new String:flags[32];
 					GetConVarString(cvar_TeamswapAdmFlags, flags, sizeof(flags));
@@ -537,26 +536,6 @@ CheckEstensions()
 	check to see if client prefs is loaded and configured properly
 	*/		
 	new iExtStatus;
-	
-	iExtStatus = GetExtensionFileStatus("game.tf2.ext", sExtError, sizeof(sExtError));
-	switch (iExtStatus)
-	{
-		case -1: 
-		{
-			LogError("Required extension \'game.tf2.ext\' failed to load. %s", sExtError);
-			SetFailState("game.tft.ext not loaded");
-		}
-		case 0:
-		{
-			LogError("Required extension \'game.tf2.ext\' has error. %s", sExtError);
-			SetFailState("game.tf2.ext has errors");
-		}
-		case -2:
-		{
-			LogError("Required extension \'game.tf2.ext\' is missing");
-			SetFailState("game.tf2.ext is missing");
-		}
-	}
 	
 	iExtStatus = GetExtensionFileStatus("clientprefs.ext", sExtError, sizeof(sExtError));
 	switch (iExtStatus)
@@ -798,15 +777,15 @@ public OnConfigsExecuted()
 	g_bKothMode = false; 
 	g_bArenaMode = false;
 	
-	if (GetConVarBool(cvar_AutoScramble) || GetConVarBool(cvar_WinStreak))
+	if (GetConVarBool(cvar_AutoScramble) || GetConVarBool(cvar_AutoScrambleWinStreak))
 	{
 		bAuto = true;
 	}
 	
-	if (GetConVarBool(cvar_Rounds))
+	if (GetConVarBool(cvar_AutoScrambleRoundCount))
 	{
 		bAuto = true;
-		g_iRoundTrigger = GetConVarInt(cvar_Rounds);
+		g_iRoundTrigger = GetConVarInt(cvar_AutoScrambleRoundCount);
 	}
 	
 	/*
@@ -1316,7 +1295,7 @@ public OnClientCookiesCached(client)
 		{
 			LogAction(client, -1, "\"%L\" is reconnect blocked", client);
 			SetupTeamSwapBlock(client);
-			CreateTimer(20.0, timer_Restore, GetClientUserId(client));
+			CreateTimer(10.0, timer_Restore, GetClientUserId(client));
 		}
 	}   
 }
@@ -2058,7 +2037,7 @@ public hook_Start(Handle:event, const String:name[], bool:dontBroadcast)
 	*/
 	if (g_bScrambleNextRound)
 	{
-		new rounds = GetConVarInt(cvar_Rounds);
+		new rounds = GetConVarInt(cvar_AutoScrambleRoundCount);
 		if (rounds)
 			g_iRoundTrigger += rounds;
 		StartScrambleDelay(0.0);
@@ -2189,20 +2168,20 @@ bool:WinStreakCheck(winningTeam)
 {
 	if (g_bScrambleNextRound || !g_bWasFullRound)
 		return false;
-	if (GetConVarBool(cvar_Rounds) && g_iRoundTrigger == g_iCompleteRounds)
+	if (GetConVarBool(cvar_AutoScrambleRoundCount) && g_iRoundTrigger == g_iCompleteRounds)
 	{
 		PrintToChatAll("\x01\x04[SM]\x01 %t", "RoundMessage");
 		LogAction(0, -1, "Rount limit reached");
 		return true;
 	}
-	if (!GetConVarBool(cvar_WinStreak))
+	if (!GetConVarBool(cvar_AutoScrambleWinStreak))
 		return false;
 	if (winningTeam == TEAM_RED)
 	{
 		if (g_aTeams[iBluWins] >= 1)
 			g_aTeams[iBluWins] = 0;	
 		g_aTeams[iRedWins]++;
-		if (g_aTeams[iRedWins] >= GetConVarInt(cvar_WinStreak))
+		if (g_aTeams[iRedWins] >= GetConVarInt(cvar_AutoScrambleWinStreak))
 		{
 			PrintToChatAll("\x01\x04[SM]\x01 %t", "RedStreak");
 			LogAction(0, -1, "Red win limit reached");
@@ -2214,7 +2193,7 @@ bool:WinStreakCheck(winningTeam)
 		if (g_aTeams[iRedWins] >= 1)
 			g_aTeams[iRedWins] = 0;
 		g_aTeams[iBluWins]++;
-		if (g_aTeams[iBluWins] >= GetConVarInt(cvar_WinStreak))
+		if (g_aTeams[iBluWins] >= GetConVarInt(cvar_AutoScrambleWinStreak))
 		{
 			PrintToChatAll("\x01\x04[SM]\x01 %t", "BluStreak");
 			LogAction(0, -1, "Blu win limit reached");
@@ -2487,7 +2466,7 @@ bool:IsValidTarget(client, e_ImmunityModes:mode)
 	new e_Protection:iImmunity, String:flags[32]; // living players are immune
 	if (mode == scramble)
 	{
-		iImmunity = e_Protection:GetConVarInt(cvar_ScrambleAdminImmune); // living plyers are not immune from scramble
+		iImmunity = e_Protection:GetConVarInt(cvar_ScrambleImmuneMode); // living plyers are not immune from scramble
 		GetConVarString(cvar_ScrambleAdmFlags, flags, sizeof(flags));
 	}
 	else
@@ -2811,6 +2790,10 @@ stock DoRandomSort(array[], count)
 			if (aBlus[i][1] == 1 && aBlus[i][0])
 			{
 				ChangeClientTeam(aBlus[i][0], GetClientTeam(aBlus[i][0]) == TEAM_RED ? TEAM_BLUE:TEAM_RED);
+				if (!IsFakeClient(aBlus[i][0]))
+				{
+					PrintCenterText(aBlus[i][0], "%t", "TeamChangedOne");
+				}
 			}
 		}
 		if (i < iRedValidCount)
@@ -2818,6 +2801,10 @@ stock DoRandomSort(array[], count)
 			if (aReds[i][1] == 1 && aReds[i][0])
 			{
 				ChangeClientTeam(aReds[i][0], GetClientTeam(aReds[i][0]) == TEAM_RED ? TEAM_BLUE:TEAM_RED);
+				if (!IsFakeClient(aReds[i][0]))
+				{
+					PrintCenterText(aReds[i][0], "%t", "TeamChangedOne");
+				}
 			}
 		}
 	}
@@ -2924,10 +2911,7 @@ stock BlockAllTeamChange()
 		{
 			continue;
 		}
-		else
-		{
-			SetupTeamSwapBlock(i);
-		}
+		SetupTeamSwapBlock(i);
 	}
 }
 		
@@ -2944,31 +2928,42 @@ public Action:timer_ScrambleDelay(Handle:timer, any:data)  // scramble logic
 	g_aTeams[iBluWins] = 0;
 	g_aTeams[bImbalanced] = false;	
 	
-	if (scrambleMode >= gameMe_Rank && !g_bUseGameMe)
+	if (gameMe_Rank <= scrambleMode <= gameMe_SkillChange && !g_bUseGameMe)
 	{
 		LogError("GameMe function set in CFG, but GameMe is not loaded");
 		scrambleMode = randomSort;
 	}
 	
+	if ((scrambleMode == hlxCe_Rank || scrambleMode == hlxCe_Skill) && !g_bUseHlxCe)
+	{
+		LogError("HLXCE function set in CFG, but HLXCE is not loaded");
+		scrambleMode = randomSort;
+	}
+	
 	if (scrambleMode == randomSort)
 	{
-		new iHigh = 6;
-		if (g_bUseGameMe)
+		decl Random[14];
+		new iSelection;
+		for (new i; i < sizeof(Random); i++)
 		{
-			iHigh = 10;
-		}
-		if (GetRandomInt(0,4) == 4)
-		{
-			scrambleMode = playerClass;
-		}
-		scrambleMode = e_ScrambleModes:(GetRandomInt(1,iHigh));
-		if (g_bUseHlxCe)
-		{
-			if (GetRandomInt(0,1))
+			Random[i] = GetRandomInt(0,100);
+			if (6 <= i <=10 && !g_bUseGameMe)
 			{
-				GetRandomInt(0,1) ? (scrambleMode = hlxCe_Skill):(scrambleMode = hlxCe_Rank);
+				Random[i] = 0;
+			}
+			if (11 <= i <= 12 && !g_bUseHlxCe)
+			{
+				Random[i] = 0;
 			}
 		}
+		for (new i; i < sizeof(Random); i++)
+		{
+			if (Random[i] > iSelection)
+			{
+				iSelection = Random[i];
+			}
+		}
+		scrambleMode = e_ScrambleModes:iSelection;
 	}
 	ScramblePlayers(immuneMode, scrambleMode);
 	
@@ -3119,7 +3114,7 @@ SetupTeamSwapBlock(client)  /* blocks proper clients from spectating*/
 {
 	if (!g_bForceTeam)
 		return;
-	if (GetConVarBool(cvar_AdminImmune))
+	if (GetConVarBool(cvar_TeamSwapBlockImmunity))
 	{
 		if (IsClientInGame(client))
 		{
@@ -3846,7 +3841,7 @@ public Handle_RestoreMenu(Handle:RestoreMenu, MenuAction:action, client, param2)
 
 bool:CheckSpecChange(client)
 {
-	if (GetConVarBool(cvar_AdminImmune))
+	if (GetConVarBool(cvar_TeamSwapBlockImmunity))
 	{
 		new String:flags[32];
 		GetConVarString(cvar_TeamswapAdmFlags, flags, sizeof(flags));
