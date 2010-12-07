@@ -1837,8 +1837,11 @@ public Handler_VoteCallback(Handle:menu, MenuAction:action, param1, param2)
 {
 	DelayPublicVoteTriggering();
 	if (action == MenuAction_End)
-		VoteMenuClose();		
-	else if (action == MenuAction_VoteEnd)
+	{
+		CloseHandle(g_hScrambleVoteMenu);
+		g_hScrambleVoteMenu = INVALID_HANDLE;
+	}		
+	if (action == MenuAction_VoteEnd)
 	{	
 		new m_votes, totalVotes;		
 		GetMenuVoteInfo(param2, m_votes, totalVotes);
@@ -1872,7 +1875,6 @@ public Handler_VoteCallback(Handle:menu, MenuAction:action, param1, param2)
 			LogAction(-1 , 0, "%T", "VoteFailed", LANG_SERVER, against, totalVotes);
 		}
 	}
-	return 0;
 }
 
 DelayPublicVoteTriggering(bool:success = false)  // success means a scramble happened... longer delay
@@ -1896,12 +1898,6 @@ DelayPublicVoteTriggering(bool:success = false)  // success means a scramble hap
 			fDelay = GetConVarFloat(cvar_Delay);
 		g_hVoteDelayTimer = CreateTimer(fDelay, TimerEnable, TIMER_FLAG_NO_MAPCHANGE);
 	}
-}
-
-VoteMenuClose()
-{
-	CloseHandle(g_hScrambleVoteMenu);
-	g_hScrambleVoteMenu = INVALID_HANDLE;
 }
 
 public Action:cmd_Scramble(client, args)
