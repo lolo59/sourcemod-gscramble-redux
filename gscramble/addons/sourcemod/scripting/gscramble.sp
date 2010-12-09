@@ -47,7 +47,7 @@ $Copyright: (c) TftTmng 2008-2011$
 #include <hlxce-sm-api>
 #define REQUIRE_PLUGIN
 
-#define VERSION "3.0.08b"
+#define VERSION "3.0.09b"
 #define TEAM_RED 2
 #define TEAM_BLUE 3
 #define SCRAMBLE_SOUND "vo/announcer_am_teamscramble03.wav"
@@ -394,6 +394,12 @@ public OnPluginStart()
 public OnAllPluginsLoaded()
 {
 	g_bUseGameMe = false;
+	g_bUseHlxCe = false;
+	if (LibraryExists("hlxce-sm-api"))
+	{
+		g_bUseHlxCe = true;
+		LogMessage("HlxCe Available");
+	}
 	new Handle:gTopMenu;
 	if (LibraryExists("adminmenu") && ((gTopMenu = GetAdminTopMenu()) != INVALID_HANDLE))	
 		OnAdminMenuReady(gTopMenu);
