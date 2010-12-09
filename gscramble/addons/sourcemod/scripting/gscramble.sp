@@ -400,6 +400,10 @@ public OnAllPluginsLoaded()
 		g_bUseHlxCe = true;
 		LogMessage("HlxCe Available");
 	}
+	else
+	{
+		LogMessage("HlxCe Unavailable");
+	}
 	new Handle:gTopMenu;
 	if (LibraryExists("adminmenu") && ((gTopMenu = GetAdminTopMenu()) != INVALID_HANDLE))	
 		OnAdminMenuReady(gTopMenu);
@@ -1285,11 +1289,11 @@ public OnClientPostAdminCheck(client)
 	g_aPlayers[client][bHasVoted] = false;
 	g_iVoters++;
 	g_iVotesNeeded = RoundToFloor(float(g_iVoters) * GetConVarFloat(cvar_PublicNeeded));
-	
-	if (g_bUseHlxCe && GetFeatureStatus(FeatureType_Native, "HLXCE_GetPlayerData") == FeatureStatus_Available)
-	{
-		HLXCE_GetPlayerData(client);
-	}
+}
+
+public HLXCE_OnClientReady(client)
+{
+	HLXCE_GetPlayerData(client);
 }
 
 public HLXCE_OnGotPlayerData(client, const HLXCE_PlayerData:PData[])
@@ -2140,6 +2144,10 @@ public hook_Win(Handle:event, const String:name[], bool:dontBroadcast)
 	if (GetEventBool(event, "full_round"))
 	{
 		g_bWasFullRound = true;
+		g_iCompleteRounds++;
+	}
+	else if (!GetConVarBool(cvar_FullRoundOnly))
+	{
 		g_iCompleteRounds++;
 	}
 	g_iLastRoundWinningTeam = GetEventInt(event, "team");
