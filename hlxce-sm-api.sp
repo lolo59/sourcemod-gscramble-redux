@@ -23,8 +23,8 @@
  
 #include <sourcemod>
  
-#define NAME "HLstatsX:CE API for Sourcemod"
-#define VERSION "0.3"
+#define NAME "HLstatsX:CE SQL API for Sourcemod"
+#define VERSION "0.4 alpha"
  
 #define RANKINGTYPE_SKILL 0
 #define RANKINGTYPE_KILLS 1
@@ -393,7 +393,7 @@ public OnGotPlayerData(Handle:owner, Handle:hndl, const String:error[], any:user
 	SQL_FetchRow(hndl); // there will only be one row because playerId is unique
 	for (new i = 0; i < 7; i++)
 	{
-		g_iPlayerCounts[client][HLXCE_PlayerData:i] = SQL_FetchInt(hndl, i);
+		g_iPlayerCounts[client][i] = SQL_FetchInt(hndl, i);
 		
 		#if DEBUG == 1
 			LogToGame("[HLX-API] %N data %d is %d", client, i, g_iPlayerCounts[client][i]);
@@ -408,7 +408,7 @@ public OnGotPlayerData(Handle:owner, Handle:hndl, const String:error[], any:user
 	
 	new iQSize = 180+g_iGameCodeLen;
 	decl String:szQueryText[iQSize];
-	Format(szQueryText, iQSize, "SELECT COUNT(*) FROM hlstats_Players WHERE game='%s' AND hideranking=0 AND kills>=1 AND((%s>%d)OR((%s=%d)AND(kills/IF(deaths=0,1,deaths)>%.3f)))", g_szHLXGameCode, g_szRankingType[g_iRankingType], g_iPlayerCounts[client][g_iRankingType], g_szRankingType[g_iRankingType], g_iPlayerCounts[client][g_iRankingType], FloatDiv(Float:(g_iPlayerCounts[client][PData_Kills]),Float:(iTempDeaths)));
+	Format(szQueryText, iQSize, "SELECT COUNT(*) FROM hlstats_Players WHERE game='%s' AND hideranking=0 AND kills>=1 AND((%s>%d)OR((%s=%d)AND(kills/IF(deaths=0,1,deaths)>%.3f)))", g_szHLXGameCode, g_szRankingType[g_iRankingType], g_iPlayerCounts[client][g_iRankingType], g_szRankingType[g_iRankingType], g_iPlayerCounts[client][g_iRankingType], FloatDiv(float(g_iPlayerCounts[client][PData_Kills]),float(iTempDeaths)));
 	
 	#if DEBUG == 1
 		LogToGame("[HLX-API] Sending query \"%s\"", szQueryText);
