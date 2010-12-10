@@ -1296,7 +1296,7 @@ public HLXCE_OnClientReady(client)
 	HLXCE_GetPlayerData(client);
 }
 
-public HLXCE_OnGotPlayerData(client, const HLXCE_PlayerData:PData[])
+public HLXCE_OnGotPlayerData(client, const PData[HLXCE_PlayerData])
 {
 	g_aPlayers[client][iHlxCe_Rank] = PData[PData_Rank];
 	g_aPlayers[client][iHlxCe_Skill] = PData[PData_Skill];
