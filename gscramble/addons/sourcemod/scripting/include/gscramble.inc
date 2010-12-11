@@ -54,6 +54,7 @@ public SharedPlugin:_pl_gscramble =
 public _pl_gscramble_SetNTVOptional()
 {
 	MarkNativeAsOptional("GS_IsClientTeamChangeBlocked");
+	MarkNativeAsOptional("TF2_GetRoundTimeLeft");
 }
 
 /**
@@ -65,3 +66,10 @@ public _pl_gscramble_SetNTVOptional()
  * @errors           Invalid client index. Bots are not supported
  */
 native bool:GS_IsClientTeamChangeBlocked(client, initiator);
+
+/**
+* Gets the round time left in seconds
+* @return 			Time left in seconds, 0 if not tracking
+* @ errors 			None
+*/
+native TF2_GetRoundTimeLeft();

@@ -655,6 +655,7 @@ public APLRes:AskPluginLoad2(Handle:myself, bool:late, String:error[], err_max)
 	}
 		
 	CreateNative("GS_IsClientTeamChangeBlocked", Native_GS_IsBlocked);
+	CreateNative("TF2_GetRoundTimeLeft", TF2_GetRoundTimeLeft);
 	MarkNativeAsOptional("HLXCE_GetPlayerData");
 	MarkNativeAsOptional("QueryGameMEStats");
 	MarkNativeAsOptional("TF2_IsPlayerInDuel");
@@ -687,6 +688,11 @@ bool:IsBlocked(client)
 	if (g_aPlayers[client][iBlockTime] > GetTime())
 		return true;
 	return false;
+}
+
+public TF2_GetRoundTimeLeft(Handle:plugin, numparams)
+{
+	return g_iRoundTimer;
 }
 
 public Native_GS_IsBlocked(Handle:plugin, numParams)
