@@ -2597,6 +2597,10 @@ Float:GetClientScrambleScore(client, e_ScrambleModes:mode)
 		new Float:fTime = FloatDiv(fClientTime, 60.0);
 		fScore = FloatDiv(fScore, fTime);
 	}
+	else
+	{
+		fScore = GetRandomFloat(0.0, 1.0);
+	}
 	return fScore;	
 }
 
@@ -2724,13 +2728,9 @@ PrintScrambleStats(swaps)
 	if (GetConVarBool(cvar_PrintScrambleStats))
 	{
 		new Float:fScrPercent = FloatDiv(float(swaps),float(GetClientCount(true)));
-		decl String:sPercent[4];
+		decl String:sPercent[6];
 		fScrPercent = FloatMul(fScrPercent, 100.0);
 		FloatToString(fScrPercent, sPercent, sizeof(sPercent));
-		if (sPercent[3] == '.')
-		{
-			sPercent[3] = ' ';
-		}
 		PrintToChatAll("\x01\x04[SM]\x01 %t", "StatsMessage", swaps, GetClientCount(true), sPercent);	
 	}
 }
@@ -2928,7 +2928,7 @@ stock PerformTopSwap(e_ImmunityModes:immuneMode)
 			}
 		}
 	}
-	PrintScrambleStats(iSwaps);
+	PrintScrambleStats(iSwaps*2);
 	g_bBlockDeath = false;
 }
 
