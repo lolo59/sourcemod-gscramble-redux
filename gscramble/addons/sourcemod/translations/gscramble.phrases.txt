@@ -264,4 +264,9 @@
 	{
 		"en"		"Invalid command argument."
 	}
+	"StatsMessage"
+	{
+		"#format"		"{1:i},{2:i},{1:f}"
+		"en"			"Scramble swapped {1} out of {2} players. {f}\%"
+	}
 }

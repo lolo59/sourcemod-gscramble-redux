@@ -116,7 +116,8 @@ new Handle:cvar_Version				= INVALID_HANDLE,
 	Handle:cvar_TopSwaps			= INVALID_HANDLE,
 	Handle:cvar_BalanceTimeLimit = INVALID_HANDLE,
 	Handle:cvar_ScrLockTeams		= INVALID_HANDLE,
-	Handle:cvar_RandomSelections = INVALID_HANDLE;
+	Handle:cvar_RandomSelections = INVALID_HANDLE,
+	Handle:cvar_PrintScrambleStats = INVALID_HANDLE;
 
 new Handle:g_hAdminMenu 			= INVALID_HANDLE,
 	Handle:g_hScrambleVoteMenu 		= INVALID_HANDLE,
@@ -355,6 +356,7 @@ public OnPluginStart()
 	cvar_DominationDiff		= CreateConVar("gs_as_domination_diff",		"10",	"If a team has this many more dominations than the other team, then trigger a scramble.\n0 = skips this check", FCVAR_PLUGIN, true, 0.0, false);
 	cvar_Koth				= CreateConVar("gs_as_koth_pointcheck",		"0",	"If enabled, trigger a scramble if a team never captures the point in koth mode.", FCVAR_PLUGIN, true, 0.0, true, 1.0);
 	cvar_ScrLockTeams		= CreateConVar("gs_as_lockteamsbefore", "1", "If enabled, lock the teams between the scramble check and the actual scramble", FCVAR_PLUGIN, true, 0.0, true, 1.0);
+	cvar_PrintScrambleStats = CreateConVar("gs_as_print_stats", "1", "If enabled, print the scramble stats", FCVAR_PLUGIN, true, 0.0, true, 1.0);
 	
 	cvar_Silent 		=	CreateConVar("gs_silent", "0", 	"Disable most commen chat messages", FCVAR_PLUGIN, true, 0.0, true, 1.0);
 	cvar_VoteCommand =	CreateConVar("gs_vote_trigger",	"votescramble", "The trigger for starting a vote-scramble", FCVAR_PLUGIN);
@@ -2141,6 +2143,7 @@ stock StartForceTimer()
 
 public hook_Win(Handle:event, const String:name[], bool:dontBroadcast)
 {	
+	g_iRoundTimer = 0;
 	if (GetConVarBool(cvar_ScrLockTeams))
 	{
 		g_bNoSpec = true;
@@ -2693,6 +2696,7 @@ stock ScramblePlayers(e_ImmunityModes:immuneMode, e_ScrambleModes:scrambleMode)
 	for (i = iTemp; i < iCount; i++)
 	{
 		client = iValidPlayers[i];
+		iTempTeam = GetClientTeam(client);
 		if (iImmuneDiff > 0)
 		{
 			ChangeClientTeam(client, iImmuneTeam == TEAM_RED ? TEAM_BLUE:TEAM_RED);
@@ -2700,7 +2704,6 @@ stock ScramblePlayers(e_ImmunityModes:immuneMode, e_ScrambleModes:scrambleMode)
 		}
 		else
 		{
-			iTempTeam = GetClientTeam(client);
 			ChangeClientTeam(client, bToRed ? TEAM_RED:TEAM_BLUE);
 			bToRed = !bToRed;
 		}
@@ -2711,8 +2714,19 @@ stock ScramblePlayers(e_ImmunityModes:immuneMode, e_ScrambleModes:scrambleMode)
 		}
 	}
 	g_bBlockDeath = false;
-	LogMessage("Scramble changed %i client's teams", iSwaps); 
+	LogMessage("Scramble changed %i client's teams", iSwaps);
+	PrintScrambleStats(iSwaps);
 	BlockAllTeamChange();
+}
+
+PrintScrambleStats(swaps)
+{
+	if (GetConVarBool(cvar_PrintScrambleStats))
+	{
+		new Float:fScrPercent = FloatDiv(float(swaps),float(GetClientCount(true)));
+		fScrPercent = FloatMul(fScrPercent, 100.0);
+		PrintToChatAll("\x01\x04[SM]\x01 %t", "StatsMessage", swaps, GetClientCount(true), fScrPercent);	
+	}
 }
 
 stock DoRandomSort(array[], count)
@@ -2815,6 +2829,7 @@ stock DoRandomSort(array[], count)
 			}
 		}
 	}
+	PrintScrambleStats(iRedSelections+iBluSelections);
 	g_bBlockDeath = false;
 }
 
@@ -2907,6 +2922,7 @@ stock PerformTopSwap(e_ImmunityModes:immuneMode)
 			}
 		}
 	}
+	PrintScrambleStats(iCount1+iCount2);
 	g_bBlockDeath = false;
 }
 
