@@ -2724,8 +2724,10 @@ PrintScrambleStats(swaps)
 	if (GetConVarBool(cvar_PrintScrambleStats))
 	{
 		new Float:fScrPercent = FloatDiv(float(swaps),float(GetClientCount(true)));
+		decl String:sPercent[3];
 		fScrPercent = FloatMul(fScrPercent, 100.0);
-		PrintToChatAll("\x01\x04[SM]\x01 %t", "StatsMessage", swaps, GetClientCount(true), fScrPercent);	
+		FloatToString(fScrPercent, sPercent, sizeof(sPercent));
+		PrintToChatAll("\x01\x04[SM]\x01 %t", "StatsMessage", swaps, GetClientCount(true), sPercent);	
 	}
 }
 
