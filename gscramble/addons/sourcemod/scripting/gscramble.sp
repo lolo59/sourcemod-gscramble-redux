@@ -2724,9 +2724,13 @@ PrintScrambleStats(swaps)
 	if (GetConVarBool(cvar_PrintScrambleStats))
 	{
 		new Float:fScrPercent = FloatDiv(float(swaps),float(GetClientCount(true)));
-		decl String:sPercent[3];
+		decl String:sPercent[4];
 		fScrPercent = FloatMul(fScrPercent, 100.0);
 		FloatToString(fScrPercent, sPercent, sizeof(sPercent));
+		if (sPercent[3] == '.')
+		{
+			sPercent[3] = ' ';
+		}
 		PrintToChatAll("\x01\x04[SM]\x01 %t", "StatsMessage", swaps, GetClientCount(true), sPercent);	
 	}
 }
@@ -2902,7 +2906,7 @@ stock PerformTopSwap(e_ImmunityModes:immuneMode)
 	}
 	SortCustom2D(iArray1, iCount1, SortIntsDesc);
 	SortCustom2D(iArray2, iCount2, SortIntsDesc);
-	for (new i = 0; i < iCount1; i++)
+	for (new i = 0; i < iSwaps; i++)
 	{
 		if (iArray1[i][0])
 		{
@@ -2913,7 +2917,7 @@ stock PerformTopSwap(e_ImmunityModes:immuneMode)
 			}
 		}
 	}
-	for (new i = 0; i < iCount2; i++)
+	for (new i = 0; i < iSwaps; i++)
 	{
 		if (iArray2[i][0])
 		{
@@ -2924,7 +2928,7 @@ stock PerformTopSwap(e_ImmunityModes:immuneMode)
 			}
 		}
 	}
-	PrintScrambleStats(iCount1+iCount2);
+	PrintScrambleStats(iSwaps);
 	g_bBlockDeath = false;
 }
 
