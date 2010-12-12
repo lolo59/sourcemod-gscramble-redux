@@ -694,7 +694,11 @@ bool:IsBlocked(client)
 
 public TF2_GetRoundTimeLeft(Handle:plugin, numparams)
 {
-	return g_iRoundTimer;
+	if (g_RoundState == normal)
+	{
+		return g_iRoundTimer;
+	}
+	else return 0;
 }
 
 public Native_GS_IsBlocked(Handle:plugin, numParams)
