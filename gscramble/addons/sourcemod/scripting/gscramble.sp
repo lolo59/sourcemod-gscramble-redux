@@ -117,7 +117,8 @@ new Handle:cvar_Version				= INVALID_HANDLE,
 	Handle:cvar_BalanceTimeLimit = INVALID_HANDLE,
 	Handle:cvar_ScrLockTeams		= INVALID_HANDLE,
 	Handle:cvar_RandomSelections = INVALID_HANDLE,
-	Handle:cvar_PrintScrambleStats = INVALID_HANDLE;
+	Handle:cvar_PrintScrambleStats = INVALID_HANDLE,
+	Handle:cvar_ScrambleDuelImmunity = INVALID_HANDLE;
 
 new Handle:g_hAdminMenu 			= INVALID_HANDLE,
 	Handle:g_hScrambleVoteMenu 		= INVALID_HANDLE,
@@ -357,6 +358,7 @@ public OnPluginStart()
 	cvar_Koth				= CreateConVar("gs_as_koth_pointcheck",		"0",	"If enabled, trigger a scramble if a team never captures the point in koth mode.", FCVAR_PLUGIN, true, 0.0, true, 1.0);
 	cvar_ScrLockTeams		= CreateConVar("gs_as_lockteamsbefore", "1", "If enabled, lock the teams between the scramble check and the actual scramble", FCVAR_PLUGIN, true, 0.0, true, 1.0);
 	cvar_PrintScrambleStats = CreateConVar("gs_as_print_stats", "1", "If enabled, print the scramble stats", FCVAR_PLUGIN, true, 0.0, true, 1.0);
+	cvar_ScrambleDuelImmunity = CreateConVar("gs_as_dueling_immunity", "0", "If set it 1, grant immunity to dueling players during a scramble", FCVAR_PLUGIN, true, 0.0, true, 1.0);
 	
 	cvar_Silent 		=	CreateConVar("gs_silent", "0", 	"Disable most commen chat messages", FCVAR_PLUGIN, true, 0.0, true, 1.0);
 	cvar_VoteCommand =	CreateConVar("gs_vote_trigger",	"votescramble", "The trigger for starting a vote-scramble", FCVAR_PLUGIN);
@@ -2453,9 +2455,12 @@ bool:IsValidTarget(client, e_ImmunityModes:mode)
 	{
 		return true;
 	}
-	if (mode == balance && (GetFeatureStatus(FeatureType_Native, "TF2_IsPlayerInDuel") == FeatureStatus_Available) && TF2_IsPlayerInDuel(client))
+	if ((mode == scramble && GetConVarBool(cvar_ScrambleDuelImmunity)) || mode == balance)
 	{
-		return false;
+		if (GetFeatureStatus(FeatureType_Native, "TF2_IsPlayerInDuel") == FeatureStatus_Available	&& TF2_IsPlayerInDuel(client))
+		{
+			return false;
+		}
 	}
 	// next check for buddies. if the buddy is on the wrong team, we skip the rest of the immunity checks
 	if (g_bUseBuddySystem && mode == balance)
@@ -2612,11 +2617,11 @@ Float:GetClientScrambleScore(client, e_ScrambleModes:mode)
 helps decide how many people to swap to the team opposite the team with more
 immune clients
 */
-stock ScramblePlayers(e_ImmunityModes:immuneMode, e_ScrambleModes:scrambleMode)
+stock ScramblePlayers(e_ScrambleModes:scrambleMode)
 {
 	if (scrambleMode == topSwap)
 	{
-		PerformTopSwap(immuneMode);
+		PerformTopSwap();
 		BlockAllTeamChange();
 		return;
 	}
@@ -2631,7 +2636,7 @@ stock ScramblePlayers(e_ImmunityModes:immuneMode, e_ScrambleModes:scrambleMode)
 	{
 		if (IsClientInGame(i) && IsValidTeam(i))
 		{
-			if (IsValidTarget(i, immuneMode))
+			if (IsValidTarget(i, scramble))
 			{
 				iValidPlayers[iCount] = i;
 				iCount++;
@@ -2839,8 +2844,8 @@ stock DoRandomSort(array[], count)
 			}
 		}
 	}
-	PrintScrambleStats(iRedSelections+iBluSelections);
 	g_bBlockDeath = false;
+	PrintScrambleStats(iRedSelections+iBluSelections);
 }
 
 stock SelectRandom(arr[][], size, numSelectsToMake) 
@@ -2865,7 +2870,7 @@ stock SelectRandom(arr[][], size, numSelectsToMake)
 	}
 } 
 
-stock PerformTopSwap(e_ImmunityModes:immuneMode)
+stock PerformTopSwap()
 {
 	g_bBlockDeath = true;
 	new iTeam1 = GetTeamClientCount(TEAM_RED),
@@ -2888,7 +2893,7 @@ stock PerformTopSwap(e_ImmunityModes:immuneMode)
 	}
 	for (new i = 1; i <= MaxClients; i++)
 	{
-		if (IsClientInGame(i) && IsValidTarget(i, immuneMode))
+		if (IsClientInGame(i) && IsValidTarget(i, scramble))
 		{
 			if (GetClientTeam(i) == TEAM_RED)
 			{
@@ -2932,8 +2937,8 @@ stock PerformTopSwap(e_ImmunityModes:immuneMode)
 			}
 		}
 	}
-	PrintScrambleStats(iSwaps*2);
 	g_bBlockDeath = false;
+	PrintScrambleStats(iSwaps*2);	
 }
 
 stock BlockAllTeamChange()
@@ -2953,52 +2958,57 @@ public Action:timer_ScrambleDelay(Handle:timer, any:data)  // scramble logic
 	g_hScrambleDelay = INVALID_HANDLE;
 	g_bScrambleNextRound = false;
 	g_bScrambledThisRound = true;
-	new e_ImmunityModes:immuneMode = scramble;
 	ResetPack(data);
 	new respawn = ReadPackCell(data),
 		e_ScrambleModes:scrambleMode = e_ScrambleModes:ReadPackCell(data);
 	g_aTeams[iRedWins] = 0;
 	g_aTeams[iBluWins] = 0;
 	g_aTeams[bImbalanced] = false;	
-	
-	if (gameMe_Rank <= scrambleMode <= gameMe_SkillChange && !g_bUseGameMe)
+	if (g_bPreGameScramble)
 	{
-		LogError("GameMe function set in CFG, but GameMe is not loaded");
-		scrambleMode = randomSort;
+		scrambleMode = random;
 	}
-	
-	if ((scrambleMode == hlxCe_Rank || scrambleMode == hlxCe_Skill) && !g_bUseHlxCe)
+	else
 	{
-		LogError("HLXCE function set in CFG, but HLXCE is not loaded");
-		scrambleMode = randomSort;
-	}
-	
-	if (scrambleMode == randomSort)
-	{
-		decl Random[14];
-		new iSelection;
-		for (new i; i < sizeof(Random); i++)
+		if (gameMe_Rank <= scrambleMode <= gameMe_SkillChange && !g_bUseGameMe)
 		{
-			Random[i] = GetRandomInt(0,100);
-			if (6 <= i <=10 && !g_bUseGameMe)
-			{
-				Random[i] = 0;
-			}
-			if (11 <= i <= 12 && !g_bUseHlxCe)
-			{
-				Random[i] = 0;
-			}
+			LogError("GameMe function set in CFG, but GameMe is not loaded");
+			scrambleMode = randomSort;
 		}
-		for (new i; i < sizeof(Random); i++)
+		
+		if ((scrambleMode == hlxCe_Rank || scrambleMode == hlxCe_Skill) && !g_bUseHlxCe)
 		{
-			if (Random[i] > iSelection)
-			{
-				iSelection = Random[i];
-			}
+			LogError("HLXCE function set in CFG, but HLXCE is not loaded");
+			scrambleMode = randomSort;
 		}
-		scrambleMode = e_ScrambleModes:iSelection;
+		
+		if (scrambleMode == randomSort)
+		{
+			decl Random[14];
+			new iSelection;
+			for (new i; i < sizeof(Random); i++)
+			{
+				Random[i] = GetRandomInt(0,100);
+				if (6 <= i <=10 && !g_bUseGameMe)
+				{
+					Random[i] = 0;
+				}
+				if (11 <= i <= 12 && !g_bUseHlxCe)
+				{
+					Random[i] = 0;
+				}
+			}
+			for (new i; i < sizeof(Random); i++)
+			{
+				if (Random[i] > iSelection)
+				{
+					iSelection = Random[i];
+				}
+			}
+			scrambleMode = e_ScrambleModes:iSelection;
+		}
 	}
-	ScramblePlayers(immuneMode, scrambleMode);
+	ScramblePlayers(scrambleMode);
 	
 	CreateTimer(1.0, Timer_ScrambleSound);
 	DelayPublicVoteTriggering(true);
