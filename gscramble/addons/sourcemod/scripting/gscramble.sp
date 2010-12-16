@@ -118,7 +118,8 @@ new Handle:cvar_Version				= INVALID_HANDLE,
 	Handle:cvar_ScrLockTeams		= INVALID_HANDLE,
 	Handle:cvar_RandomSelections = INVALID_HANDLE,
 	Handle:cvar_PrintScrambleStats = INVALID_HANDLE,
-	Handle:cvar_ScrambleDuelImmunity = INVALID_HANDLE;
+	Handle:cvar_ScrambleDuelImmunity = INVALID_HANDLE,
+	Handle:cvar_AbHumanOnly			= INVALID_HANDLE;
 
 new Handle:g_hAdminMenu 			= INVALID_HANDLE,
 	Handle:g_hScrambleVoteMenu 		= INVALID_HANDLE,
@@ -306,6 +307,7 @@ public OnPluginStart()
 	cvar_BalanceActionDelay = CreateConVar("gs_ab_actiondelay",		"5", 	"Time, in seconds after an imbalance is detected in which an imbalance is flagged, and possible swapping can occur", FCVAR_PLUGIN, true, 0.0, false);
 	cvar_ForceBalanceTrigger = CreateConVar("gs_ab_forcetrigger",	"4",	"If teams become imbalanced by this many players, auto-force a balance", FCVAR_PLUGIN, true, 0.0, false);
 	cvar_BalanceTimeLimit	= 	CreateConVar("gs_ab_timelimit", "0", 		"If there are this many seconds, or less, remaining in a round, stop auto-balacing", FCVAR_PLUGIN, true, 0.0, false);
+	cvar_AbHumanOnly = CreateConVar("gs_ab_humanonly", "0", "Only auto-balance human players", FCVAR_PLUGIN, true, 0.0, true, 1.0);
 	
 	cvar_ImbalancePrevent	= CreateConVar("gs_prevent_spec_imbalance", "0", "If set, block changes to spectate that result in a team imbalance", FCVAR_PLUGIN, true, 0.0, true, 1.0);
 	cvar_BuddySystem		= CreateConVar("gs_use_buddy_system", "0", "Allow players to choose buddies to try to keep them on the same team", FCVAR_PLUGIN, true, 0.0, true, 1.0);
@@ -2453,6 +2455,10 @@ bool:IsValidTarget(client, e_ImmunityModes:mode)
 {
 	if (IsFakeClient(client))
 	{
+		if (GetConVarBool(cvar_AbHumanOnly))
+		{
+			return false;
+		}
 		return true;
 	}
 	if ((mode == scramble && GetConVarBool(cvar_ScrambleDuelImmunity)) || mode == balance)
