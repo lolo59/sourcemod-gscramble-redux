@@ -47,7 +47,7 @@ $Copyright: (c) TftTmng 2008-2011$
 #include <hlxce-sm-api>
 #define REQUIRE_PLUGIN
 
-#define VERSION "3.0.0"
+#define VERSION "3.0.1"
 #define TEAM_RED 2
 #define TEAM_BLUE 3
 #define SCRAMBLE_SOUND "vo/announcer_am_teamscramble03.wav"
@@ -119,7 +119,8 @@ new Handle:cvar_Version				= INVALID_HANDLE,
 	Handle:cvar_RandomSelections = INVALID_HANDLE,
 	Handle:cvar_PrintScrambleStats = INVALID_HANDLE,
 	Handle:cvar_ScrambleDuelImmunity = INVALID_HANDLE,
-	Handle:cvar_AbHumanOnly			= INVALID_HANDLE;
+	Handle:cvar_AbHumanOnly			= INVALID_HANDLE,
+	Handle:cvar_LockTeamsFullRound  	= INVALID_HANDLE;
 
 new Handle:g_hAdminMenu 			= INVALID_HANDLE,
 	Handle:g_hScrambleVoteMenu 		= INVALID_HANDLE,
@@ -170,6 +171,7 @@ new bool:g_bScrambleNextRound = false,
 	bool:g_bUseGameMe,
 	bool:g_bUseHlxCe,
 	bool:g_bVoteCommandCreated,
+	bool:g_bTeamsLocked,
 	/**
 	overrides the auto scramble check
 	*/
@@ -361,6 +363,7 @@ public OnPluginStart()
 	cvar_ScrLockTeams		= CreateConVar("gs_as_lockteamsbefore", "1", "If enabled, lock the teams between the scramble check and the actual scramble", FCVAR_PLUGIN, true, 0.0, true, 1.0);
 	cvar_PrintScrambleStats = CreateConVar("gs_as_print_stats", "1", "If enabled, print the scramble stats", FCVAR_PLUGIN, true, 0.0, true, 1.0);
 	cvar_ScrambleDuelImmunity = CreateConVar("gs_as_dueling_immunity", "0", "If set it 1, grant immunity to dueling players during a scramble", FCVAR_PLUGIN, true, 0.0, true, 1.0);
+	cvar_LockTeamsFullRound	= CreateConVar("gs_as_lockteamsafter", "0", "If enabled, block team changes after a scramble for the entire next round", FCVAR_PLUGIN, true, 0.0, true, 1.0);
 	
 	cvar_Silent 		=	CreateConVar("gs_silent", "0", 	"Disable most commen chat messages", FCVAR_PLUGIN, true, 0.0, true, 1.0);
 	cvar_VoteCommand =	CreateConVar("gs_vote_trigger",	"votescramble", "The trigger for starting a vote-scramble", FCVAR_PLUGIN);
@@ -399,17 +402,6 @@ public OnPluginStart()
 
 public OnAllPluginsLoaded()
 {
-	g_bUseGameMe = false;
-	g_bUseHlxCe = false;
-	if (LibraryExists("hlxce-sm-api"))
-	{
-		g_bUseHlxCe = true;
-		LogMessage("HlxCe Available");
-	}
-	else
-	{
-		LogMessage("HlxCe Unavailable");
-	}
 	new Handle:gTopMenu;
 	if (LibraryExists("adminmenu") && ((gTopMenu = GetAdminTopMenu()) != INVALID_HANDLE))	
 		OnAdminMenuReady(gTopMenu);
@@ -690,7 +682,16 @@ bool:IsBlocked(client)
 {
 	if (!g_bForceTeam)
 		return false;
-
+	if (g_bTeamsLocked)
+	{
+		new String:flags[32];
+		GetConVarString(cvar_TeamswapAdmFlags, flags, sizeof(flags));
+		if (IsAdmin(client, flags))
+		{
+			return false;
+		}
+		return true;
+	}
 	if (g_aPlayers[client][iBlockTime] > GetTime())
 		return true;
 	return false;
@@ -749,8 +750,19 @@ public Action:CMD_VoteTrigger(client, args)
 
 public OnConfigsExecuted()
 {
+	g_bUseGameMe = false;
+	g_bUseHlxCe = false;
+	if (GetFeatureStatus(FeatureType_Native, "HLXCE_GetPlayerData") == FeatureStatus_Available)
+	{
+		g_bUseHlxCe = true;
+		LogMessage("HlxCe Available");
+	}
+	else
+	{
+		LogMessage("HlxCe Unavailable");
+	}
 	CreateVoteCommand();
-	if (FindConVar("gameme_plugin_version") != INVALID_HANDLE && GetFeatureStatus(FeatureType_Native, "QueryGameMEStats") == FeatureStatus_Available)
+	if (GetFeatureStatus(FeatureType_Native, "QueryGameMEStats") == FeatureStatus_Available)
 	{
 		LogMessage("GameMe Available");
 		g_bUseGameMe = true;
@@ -1012,6 +1024,7 @@ hook()
 {
 	LogAction(0, -1, "Hooking events.");
 	HookEvent("teamplay_round_start", 		hook_Start, EventHookMode_PostNoCopy);
+	HookEvent("player_disconnect", Event_PlayerDisconnect, EventHookMode_Post);
 	HookEvent("teamplay_round_win", 		hook_Win, EventHookMode_Post);
 	HookEvent("teamplay_setup_finished", 	hook_Setup, EventHookMode_PostNoCopy);
 	HookEvent("player_death", 				Event_PlayerDeath_Pre, EventHookMode_Pre);
@@ -1035,6 +1048,7 @@ hook()
 unHook()
 {
 	LogAction(0, -1, "Unhooking events");
+	UnhookEvent("player_disconnect", Event_PlayerDisconnect, EventHookMode_Post);
 	UnhookEvent("teamplay_round_start", 		hook_Start, EventHookMode_PostNoCopy);
 	UnhookEvent("teamplay_round_win", 		hook_Win, EventHookMode_Post);
 	UnhookEvent("teamplay_setup_finished", 	hook_Setup, EventHookMode_PostNoCopy);
@@ -1224,9 +1238,6 @@ public QuerygameMEStatsCallback(command, payload, client, const total_cell_value
 
 public OnClientDisconnect(client)
 {
-	
-	CheckBalance(true);
-	
 	if (IsFakeClient(client))
 		return;
 	g_aPlayers[client][bHasFlag] = false;
@@ -1243,27 +1254,20 @@ public OnClientDisconnect(client)
 	
 	if (GetConVarBool(cvar_AdminBlockVote) && g_aPlayers[client][bIsVoteAdmin])
 		g_iNumAdmins--;
-		
-	if (g_bUseBuddySystem)
-	{
-		for (new i = 1; i <= MaxClients; i++)
-		{
-			if (g_aPlayers[i][iBuddy] == client)
-			{
-				if (IsClientInGame(i))
-					PrintToChat(i, "\x01\x04[SM]\x01 %t", "YourBuddyLeft");
-				g_aPlayers[i][iBuddy] = 0;
-			}
-		}
-	}
 	
-	if (g_RoundState != mapEnding)
+}
+
+public Action:Event_PlayerDisconnect(Handle:event, const String:name[], bool:dontBroadcast)
+{
+	CheckBalance(true);
+	new client = GetClientOfUserId(GetEventInt(event, "userid"));
+	if (client && !IsFakeClient(client))
 	{		
 		/**
 		check to see if we should remember his info for disconnect
 		reconnect team blocking
 		*/
-		if (g_bUseClientPrefs && g_bForceTeam && g_bForceReconnect && IsClientInGame(client) && IsValidTeam(client) && IsBlocked(client))
+		if (g_bUseClientPrefs && g_bForceTeam && g_bForceReconnect && IsClientInGame(client) && IsValidTeam(client) && (g_bTeamsLocked || IsBlocked(client)))
 		{
 			decl String:blockTime[128], String:teamIndex[5], iIndex, String:serverIp[50], String:serverPort[10];
 			GetConVarString(FindConVar("hostip"), serverIp, sizeof(serverIp));
@@ -1277,6 +1281,20 @@ public OnClientDisconnect(client)
 			SetClientCookie(client, g_cookie_teamIndex, teamIndex);
 			SetClientCookie(client, g_cookie_serverIp, serverIp);
 			LogAction(client, -1, "\"%L\" is team swap blocked, and is being saved.", client);
+		}
+		if (g_bUseBuddySystem)
+		{
+			for (new i = 1; i <= MaxClients; i++)
+			{
+				if (g_aPlayers[i][iBuddy] == client)
+				{
+					if (IsClientInGame(i))
+					{
+						PrintToChat(i, "\x01\x04[SM]\x01 %t", "YourBuddyLeft");
+					}
+					g_aPlayers[i][iBuddy] = 0;
+				}
+			}
 		}
 	}
 }
@@ -1384,6 +1402,7 @@ public OnMapStart()
 	* reset most of what we track with this plugin
 	* team wins, frags, gamestate... ect
 	*/
+	g_bTeamsLocked = false;
 	g_bScrambledThisRound = false;
 	g_bScrambleOverride = false;
 	g_iRoundTrigger = 0;
@@ -2011,6 +2030,10 @@ SwapPreferences()
 
 public hook_Start(Handle:event, const String:name[], bool:dontBroadcast)
 {
+	if (g_bTeamsLocked)
+	{
+		g_bTeamsLocked = false;
+	}
 	g_bNoSpec = false;
 	/**
 	check to see if the previos round warrented a trigger
@@ -2053,7 +2076,7 @@ public hook_Start(Handle:event, const String:name[], bool:dontBroadcast)
 		new rounds = GetConVarInt(cvar_AutoScrambleRoundCount);
 		if (rounds)
 			g_iRoundTrigger += rounds;
-		StartScrambleDelay(0.0);
+		StartScrambleDelay(0.1);
 	}
 	else if (GetConVarBool(cvar_ForceBalance) && g_hForceBalanceTimer == INVALID_HANDLE)
 	{
@@ -2949,6 +2972,10 @@ stock PerformTopSwap()
 
 stock BlockAllTeamChange()
 {
+	if (GetConVarBool(cvar_LockTeamsFullRound))
+	{
+		g_bTeamsLocked = true; 
+	}
 	for (new i=1; i <= MaxClients; i++)
 	{
 		if (!IsClientInGame(i) || !IsValidTeam(i) || IsFakeClient(i))
@@ -3414,12 +3441,16 @@ public OnLibraryRemoved(const String:name[])
 		g_hAdminMenu = INVALID_HANDLE;
 	if (StrEqual(name, "hlxce-sm-api"))
 		g_bUseHlxCe = false;
+	if (StrEqual(name, "gameme", false))
+		g_bUseGameMe = false;
 }
 
 public OnLibraryAdded(const String:name[])
 {
 	if (StrEqual(name, "hlxce-sm-api"))
 		g_bUseHlxCe = true;
+	if (StrEqual(name, "gameme"))
+		g_bUseGameMe = true; 
 }
 
 public OnAdminMenuReady(Handle:topmenu)
