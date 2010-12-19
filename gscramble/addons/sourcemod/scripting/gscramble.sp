@@ -1548,10 +1548,11 @@ stock GetLargerTeam()
 	{
 		return TEAM_RED;
 	}
-	else
+	else if (GetTeamClientCount(TEAM_BLUE) > GetTeamClientCount(TEAM_RED))
 	{
 		return TEAM_BLUE;
 	}
+	return 0;
 }
 
 BalanceTeams(bool:respawn=true)
@@ -2498,10 +2499,7 @@ bool:IsValidTarget(client, e_ImmunityModes:mode)
 		}
 		return true;
 	}
-	if (IsValidSpectator(client))
-	{
-		return true;
-	}
+
 	if ((mode == scramble && GetConVarBool(cvar_ScrambleDuelImmunity)) || mode == balance)
 	{
 		if (GetFeatureStatus(FeatureType_Native, "TF2_IsPlayerInDuel") == FeatureStatus_Available	&& TF2_IsPlayerInDuel(client))
@@ -2580,6 +2578,10 @@ bool:IsValidTarget(client, e_ImmunityModes:mode)
 					return false;			
 			}
 		}
+		return true;
+	}
+	if (IsValidSpectator(client))
+	{
 		return true;
 	}
 	return false;
@@ -2684,6 +2686,7 @@ stock ScramblePlayers(e_ScrambleModes:scrambleMode)
 {
 	if (scrambleMode == topSwap)
 	{
+		ForceSpecToTeam();
 		PerformTopSwap();
 		BlockAllTeamChange();
 		return;
@@ -2706,7 +2709,10 @@ stock ScramblePlayers(e_ScrambleModes:scrambleMode)
 			}
 			else
 			{
-				GetClientTeam(i) == TEAM_RED ? iRedImmune++ : iBluImmune++;
+				if (GetClientTeam(i) == TEAM_RED)
+					iRedImmune++;
+				if (GetClientTeam(i) == TEAM_BLUE)
+					iBluImmune++;
 			}
 		}
 	}
@@ -2761,6 +2767,19 @@ stock ScramblePlayers(e_ScrambleModes:scrambleMode)
 	
 	if (scrambleMode == random)
 	{
+		ForceSpecToTeam();
+		iCount = 0;
+		for (i = 1; i <= MaxClients; i++)
+		{
+			if (IsClientInGame(i) && IsValidTeam(i))
+			{
+				if (IsValidTarget(i, scramble))
+				{
+					iValidPlayers[iCount] = i;
+					iCount++;
+				}
+			}
+		}
 		SortIntegers(iValidPlayers, iCount, Sort_Random);
 		DoRandomSort(iValidPlayers, iCount);
 		BlockAllTeamChange();
@@ -2806,6 +2825,44 @@ PrintScrambleStats(swaps)
 		PrintToChatAll("\x01\x04[SM]\x01 %t", "StatsMessage", swaps, GetClientCount(true), sPercent);	
 	}
 }
+
+/**
+Force recent spectators onto a team before certain scramble modes
+*/
+stock ForceSpecToTeam()
+{
+	if (!g_bSelectSpectators)
+		return;
+	new iLarger = GetLargerTeam(),
+		iSwapped = 1;
+	if (iLarger)
+	{
+		new iDiff = GetAbsValue(GetTeamClientCount(TEAM_RED), GetTeamClientCount(TEAM_BLUE));	
+		if (iDiff)
+		{
+			for (new i = 1; i< MaxClients; i++)
+			{
+				if (iDiff && IsClientInGame(i) && IsValidSpectator(i))
+				{
+					ChangeClientTeam(i, iLarger == TEAM_RED ? TEAM_BLUE : TEAM_RED);
+					iSwapped = i;
+					iDiff--;
+				}
+			}
+		}
+		new bool:boolyBool;
+		for (new i = iSwapped; i < MaxClients; i++)
+		{
+			if (IsClientInGame(i) && IsValidSpectator(i))
+			{
+				ChangeClientTeam(i, boolyBool ? TEAM_RED:TEAM_BLUE);
+				boolyBool = !boolyBool;
+			}
+		}		
+	}
+}
+			
+	
 
 stock DoRandomSort(array[], count)
 {
@@ -2979,7 +3036,7 @@ stock PerformTopSwap()
 	SortCustom2D(iArray1, iCount1, SortIntsDesc);
 	SortCustom2D(iArray2, iCount2, SortIntsDesc);
 	for (new i = 0; i < iSwaps; i++)
-	{
+	{		
 		if (iArray1[i][0])
 		{
 			ChangeClientTeam(iArray1[i][0], TEAM_BLUE);
