@@ -120,7 +120,8 @@ new Handle:cvar_Version				= INVALID_HANDLE,
 	Handle:cvar_PrintScrambleStats = INVALID_HANDLE,
 	Handle:cvar_ScrambleDuelImmunity = INVALID_HANDLE,
 	Handle:cvar_AbHumanOnly			= INVALID_HANDLE,
-	Handle:cvar_LockTeamsFullRound  	= INVALID_HANDLE;
+	Handle:cvar_LockTeamsFullRound  	= INVALID_HANDLE,
+	Handle:cvar_SelectSpectators 		= INVALID_HANDLE;
 
 new Handle:g_hAdminMenu 			= INVALID_HANDLE,
 	Handle:g_hScrambleVoteMenu 		= INVALID_HANDLE,
@@ -172,6 +173,7 @@ new bool:g_bScrambleNextRound = false,
 	bool:g_bUseHlxCe,
 	bool:g_bVoteCommandCreated,
 	bool:g_bTeamsLocked,
+	bool:g_bSelectSpectators,
 	/**
 	overrides the auto scramble check
 	*/
@@ -217,6 +219,7 @@ enum e_PlayerInfo
 	iFrags,
 	iDeaths,
 	bool:bHasFlag,
+	iSpecChangeTime,
 	iGameMe_Rank,
 	iGameMe_Skill,
 	iGameMe_gRank,
@@ -313,6 +316,7 @@ public OnPluginStart()
 	
 	cvar_ImbalancePrevent	= CreateConVar("gs_prevent_spec_imbalance", "0", "If set, block changes to spectate that result in a team imbalance", FCVAR_PLUGIN, true, 0.0, true, 1.0);
 	cvar_BuddySystem		= CreateConVar("gs_use_buddy_system", "0", "Allow players to choose buddies to try to keep them on the same team", FCVAR_PLUGIN, true, 0.0, true, 1.0);
+	cvar_SelectSpectators = CreateConVar("gs_Select_spectators", "60", "During a scramble or force-balance, select spectators who have change to spectator in less time in seconds than this setting, 0 disables", FCVAR_PLUGIN, true, 0.0, false);
 	
 	cvar_TeamworkProtect	= CreateConVar("gs_teamwork_protect", "60",		"Time in seconds to protect a client from autobalance if they have recently captured a point, defended/touched intelligence, or assisted in or destroying an enemy sentry. 0 = disabled", FCVAR_PLUGIN, true, 0.0, false);
 	cvar_ForceBalance 		= CreateConVar("gs_force_balance",	"0", 		"Force a balance between each round. (If you use a custom team balance plugin that doesn't do this already, or you have the default one disabled)", FCVAR_PLUGIN, true, 0.0, true, 1.0);
@@ -467,14 +471,6 @@ public Action:CMD_Listener(client, const String:command[], argc)
 				{
 					GetCmdArgString(sArg, sizeof(sArg));
 				}
-				if (g_bNoSpec)
-				{
-					if (StrEqual(sArg, "spectate", false))
-					{
-						HandleStacker(client);
-						return Plugin_Handled;
-					}
-				} 
 				if (IsBlocked(client))
 				{
 					if (TeamsUnbalanced(false) && (StrEqual(sArg, "blue", false) || StrEqual(sArg, "red", false) || StringToInt(sArg) >= 2))
@@ -486,16 +482,26 @@ public Action:CMD_Listener(client, const String:command[], argc)
 					}
 					HandleStacker(client);
 					return Plugin_Handled;
-				}
-				if (GetConVarBool(cvar_ImbalancePrevent) || g_bNoSpec)
+				}				
+				
+				if (StrEqual(command, "spectate", false) || StringToInt(sArg) < 2 || StrContains(sArg, "spec", false) != -1)
 				{
-					if (StrEqual(command, "spectate", false) || StringToInt(sArg) < 2 || StrContains(sArg, "spec", false) != -1)
+					if (GetConVarBool(cvar_ImbalancePrevent))
 					{
 						if (CheckSpecChange(client))
 						{
 							HandleStacker(client);
 							return Plugin_Handled;
 						}
+					}
+					else if (g_bNoSpec)
+					{
+						HandleStacker(client);
+						return Plugin_Handled;
+					}
+					else if (g_bSelectSpectators)
+					{
+						g_aPlayers[client][iSpecChangeTime] = GetTime();
 					}
 				}
 			}
@@ -779,6 +785,7 @@ public OnConfigsExecuted()
 	/**
 	load load global values
 	*/
+	g_bSelectSpectators = GetConVarBool(cvar_SelectSpectators);
 	g_bSilent = GetConVarBool(cvar_Silent);
 	g_bAutoBalance = GetConVarBool(cvar_Balancer);
 	g_bFullRoundOnly = GetConVarBool(cvar_FullRoundOnly);
@@ -1312,6 +1319,7 @@ public OnClientPostAdminCheck(client)
 	g_aPlayers[client][iFrags] = 0;
 	g_aPlayers[client][iDeaths] = 0;
 	g_aPlayers[client][bHasFlag] = false;
+	g_aPlayers[client][iSpecChangeTime] = 0;
 	if (GetConVarBool(cvar_AdminBlockVote) && CheckCommandAccess(client, "sm_scramblevote", ADMFLAG_BAN))
 	{
 		g_aPlayers[client][bIsVoteAdmin] = true;
@@ -1561,7 +1569,13 @@ BalanceTeams(bool:respawn=true)
 	{
 		if (!IsClientInGame(i))
 			continue;
-		if (GetClientTeam(i) == team) 
+		if (IsValidSpectator(i))
+		{
+			iFatTeam[counter][0] = i;
+			iFatTeam[counter][1] = 9000;
+			counter++;
+		}
+		else if (GetClientTeam(i) == team) 
 		{
 			if (GetConVarBool(cvar_Preference) && g_aPlayers[i][iTeamPreference] == smallTeam && !TF2_IsClientUbered(i))				
 				iFatTeam[counter][1] = 3;			
@@ -2484,6 +2498,10 @@ bool:IsValidTarget(client, e_ImmunityModes:mode)
 		}
 		return true;
 	}
+	if (IsValidSpectator(client))
+	{
+		return true;
+	}
 	if ((mode == scramble && GetConVarBool(cvar_ScrambleDuelImmunity)) || mode == balance)
 	{
 		if (GetFeatureStatus(FeatureType_Native, "TF2_IsPlayerInDuel") == FeatureStatus_Available	&& TF2_IsPlayerInDuel(client))
@@ -2563,6 +2581,22 @@ bool:IsValidTarget(client, e_ImmunityModes:mode)
 			}
 		}
 		return true;
+	}
+	return false;
+}
+
+stock bool:IsValidSpectator(client)
+{
+	if (g_bSelectSpectators)
+	{
+		if (GetClientTeam(client) == 1)
+		{
+			new iChangeTime = g_aPlayers[client][iSpecChangeTime];
+			if (iChangeTime && (GetTime() - iChangeTime) < GetConVarInt(cvar_SelectSpectators))
+			{
+				return true;
+			}
+		}
 	}
 	return false;
 }
@@ -2663,7 +2697,7 @@ stock ScramblePlayers(e_ScrambleModes:scrambleMode)
 	*/
 	for (i = 1; i <= MaxClients; i++)
 	{
-		if (IsClientInGame(i) && IsValidTeam(i))
+		if (IsClientInGame(i) && (IsValidTeam(i) || IsValidSpectator(i)))
 		{
 			if (IsValidTarget(i, scramble))
 			{
