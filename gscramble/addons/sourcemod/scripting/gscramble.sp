@@ -2120,7 +2120,8 @@ public hook_Start(Handle:event, const String:name[], bool:dontBroadcast)
 	}
 	else if (g_RoundState == preGame)
 	{
-		g_RoundState = setup;
+		g_RoundState = normal;
+
 	}
 
 	/**
@@ -2129,7 +2130,7 @@ public hook_Start(Handle:event, const String:name[], bool:dontBroadcast)
 	*/
 	if (g_RoundState != preGame)
 	{
-		CreateTimer(1.0, Timer_GetTime, TIMER_FLAG_NO_MAPCHANGE);
+		CreateTimer(0.1, Timer_GetTime, TIMER_FLAG_NO_MAPCHANGE);
 	}
 	g_iRoundStartTime = GetTime();
 	g_iSpawnTime = g_iRoundStartTime;
@@ -3344,7 +3345,7 @@ public Action:Timer_GetTime(Handle:timer)
 			g_RoundState = setup;
 			return Plugin_Handled;
 		}
-		g_iRoundTimer = GetEntProp(g_iTimerEnt, Prop_Send, "m_nTimerLength") -2;
+		g_iRoundTimer = GetEntProp(g_iTimerEnt, Prop_Send, "m_nTimerLength") -1;
 		if (g_hRoundTimeTick != INVALID_HANDLE)
 		{
 			KillTimer(g_hRoundTimeTick);
