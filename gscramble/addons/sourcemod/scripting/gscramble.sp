@@ -1266,6 +1266,7 @@ public OnClientDisconnect(client)
 
 public Action:Event_PlayerDisconnect(Handle:event, const String:name[], bool:dontBroadcast)
 {
+	PrintToChatAll("disconnect");
 	CheckBalance(true);
 	new client = GetClientOfUserId(GetEventInt(event, "userid"));
 	if (client && !IsFakeClient(client))
@@ -2360,7 +2361,7 @@ CheckBalance(bool:post=false)
 		
 	if (post)
 	{
-		g_hCheckTimer = CreateTimer(0.5, timer_CheckBalance);
+		g_hCheckTimer = CreateTimer(0.1, timer_CheckBalance);
 		return;
 	}
 	if (TeamsUnbalanced())
@@ -3380,7 +3381,7 @@ stock bool:IsOkToBalance()
 	if (g_RoundState == normal)
 	{
 		new iBalanceTimeLimit = GetConVarInt(cvar_BalanceTimeLimit);
-		if (iBalanceTimeLimit)
+		if (iBalanceTimeLimit && g_iRoundTimer)
 		{
 			if (g_iRoundTimer < iBalanceTimeLimit)
 			{
