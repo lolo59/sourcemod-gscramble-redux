@@ -1266,7 +1266,6 @@ public OnClientDisconnect(client)
 
 public Action:Event_PlayerDisconnect(Handle:event, const String:name[], bool:dontBroadcast)
 {
-	PrintToChatAll("disconnect");
 	CheckBalance(true);
 	new client = GetClientOfUserId(GetEventInt(event, "userid"));
 	if (client && !IsFakeClient(client))
@@ -3346,7 +3345,7 @@ public Action:Timer_GetTime(Handle:timer)
 			g_RoundState = setup;
 			return Plugin_Handled;
 		}
-		g_iRoundTimer = GetEntProp(g_iTimerEnt, Prop_Send, "m_nTimerLength") -1;
+		g_iRoundTimer = GetEntProp(g_iTimerEnt, Prop_Send, "m_nTimerLength") -2;
 		if (g_hRoundTimeTick != INVALID_HANDLE)
 		{
 			KillTimer(g_hRoundTimeTick);
