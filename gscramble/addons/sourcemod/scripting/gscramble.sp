@@ -3550,71 +3550,58 @@ public OnAdminMenuReady(Handle:topmenu)
 	if (topmenu == g_hAdminMenu)
 		return;
 	g_hAdminMenu = topmenu;
-	new TopMenuObject:menu_category = AddToTopMenu(g_hAdminMenu, "gScramble", TopMenuObject_Category, Handle_Category, INVALID_TOPMENUOBJECT);
-
-	AddToTopMenu(g_hAdminMenu, "Start a Scramble", TopMenuObject_Item, AdminMenu_gScramble, menu_category, "sm_scrambleround", ADMFLAG_BAN);
-	AddToTopMenu(g_hAdminMenu, "Start a Vote", TopMenuObject_Item, AdminMenu_gVote, menu_category, "sm_scrambleround", ADMFLAG_BAN);
-	AddToTopMenu(g_hAdminMenu, "Reset Votes", TopMenuObject_Item, AdminMenu_gReset, menu_category, "sm_scramblevote", ADMFLAG_BAN);
-	AddToTopMenu(g_hAdminMenu, "Force Team Balance", TopMenuObject_Item, AdminMenu_gBalance, menu_category, "sm_forcebalance", ADMFLAG_BAN);
-	AddToTopMenu(g_hAdminMenu, "Cancel", TopMenuObject_Item, AdminMenu_gCancel, menu_category, "sm_cancel", ADMFLAG_BAN);
+	new TopMenuObject:menu_category = FindTopMenuCategory(topmenu, ADMINMENU_SERVERCOMMANDS);
+	
+	if (menu_category != INVALID_TOPMENUOBJECT)
+	{
+		AddToTopMenu(g_hAdminMenu, "gScramble", TopMenuObject_Item, Handle_Category, menu_category);
+	}
 }
 
 public Handle_Category(Handle:topmenu, TopMenuAction:action, TopMenuObject:object_id, param, String:buffer[], maxlength)
 {
 	switch (action)
 	{
-		case TopMenuAction_DisplayTitle:
-			Format( buffer, maxlength, "What do you want to do?" );
 		case TopMenuAction_DisplayOption:
 			Format(buffer, maxlength, "gScramble Commands");
+		case TopMenuAction_SelectOption:
+		{
+			Format(buffer, maxlength, "Select a Function");
+			decl String:sBuffer[33];
+			new Handle:hScrambleOptionsMenu = CreateMenu(Handle_ScrambleFunctionMenu);
+			SetMenuTitle(hScrambleOptionsMenu, "Choose A Function");
+			SetMenuExitButton(hScrambleOptionsMenu, true);
+			SetMenuExitBackButton(hScrambleOptionsMenu, true);
+			if (CheckCommandAccess(param, "sm_scrambleround", ADMFLAG_BAN))
+			{
+				AddMenuItem(hScrambleOptionsMenu, "0", "Start a Scramble");
+			}
+			if (CheckCommandAccess(param, "sm_scramblevote", ADMFLAG_BAN))
+			{
+				AddMenuItem(hScrambleOptionsMenu, "1", "Start a Vote");
+				Format(sBuffer, sizeof(sBuffer), "Reset %i Vote(s)", g_iVotes);
+				AddMenuItem(hScrambleOptionsMenu, "2", sBuffer);
+			}
+			if (CheckCommandAccess(param, "sm_forcebalance", ADMFLAG_BAN))
+			{
+				AddMenuItem(hScrambleOptionsMenu, "3", "Force Team Balance");
+			}
+			if (CheckCommandAccess(param, "sm_cancel", ADMFLAG_BAN))
+			{
+				if (g_bScrambleNextRound || g_hScrambleDelay != INVALID_HANDLE)
+				{
+					Format( sBuffer, sizeof(sBuffer), "Cancel (Pending Scramble)");
+					AddMenuItem(hScrambleOptionsMenu, "4", sBuffer);
+				}					
+				else if (g_bAutoScramble && g_RoundState == bonusRound)
+				{
+					Format( sBuffer, sizeof(sBuffer), "Cancel (Auto-Scramble Check)");
+					AddMenuItem(hScrambleOptionsMenu, "4", sBuffer);
+				}
+			}
+			DisplayMenu(hScrambleOptionsMenu, param, MENU_TIME_FOREVER);
+		}
 	}
-}
-
-public AdminMenu_gCancel(Handle:topmenu, TopMenuAction:action, TopMenuObject:object_id, param, String:buffer[], maxlength)
-{
-	if (action == TopMenuAction_DisplayOption)
-	{
-		if (g_bScrambleNextRound || g_hScrambleDelay != INVALID_HANDLE)		
-			Format( buffer, maxlength, "Cancel (Pending Scramble)");
-		else if (g_bAutoScramble && g_RoundState == bonusRound)
-			Format( buffer, maxlength, "Cancel (Auto-Scramble Check)");
-		else
-			Format( buffer, maxlength, "Cancel (Nothing)");
-	}
-	else if( action == TopMenuAction_SelectOption)
-		PerformCancel(param);
-}
-
-public AdminMenu_gBalance(Handle:topmenu, TopMenuAction:action, TopMenuObject:object_id, param, String:buffer[], maxlength)
-{
-	if (action == TopMenuAction_DisplayOption)
-		Format( buffer, maxlength, "Force-Balance Teams");
-	else if( action == TopMenuAction_SelectOption)
-		PerformBalance(param);
-}
-
-public AdminMenu_gReset(Handle:topmenu, TopMenuAction:action, TopMenuObject:object_id, param, String:buffer[], maxlength)
-{
-	if (action == TopMenuAction_DisplayOption)
-		Format( buffer, maxlength, "Reset Vote Triggers");
-	else if( action == TopMenuAction_SelectOption)
-		PerformReset(param);
-}
-
-public AdminMenu_gVote(Handle:topmenu, TopMenuAction:action, TopMenuObject:object_id, param, String:buffer[], maxlength)
-{
-	if (action == TopMenuAction_DisplayOption)
-		Format( buffer, maxlength, "Start a Scramble Vote");
-	else if( action == TopMenuAction_SelectOption)
-		ShowScrambleVoteMenu(param);
-}
-
-public AdminMenu_gScramble(Handle:topmenu, TopMenuAction:action, TopMenuObject:object_id, param, String:buffer[], maxlength)
-{
-	if (action == TopMenuAction_DisplayOption)
-		Format( buffer, maxlength, "Start a Scramble");
-	else if( action == TopMenuAction_SelectOption)
-		ShowScrambleSelectionMenu(param);
 }
 
 /*******************************************
@@ -3646,6 +3633,38 @@ ShowScrambleSelectionMenu(client)
 	if (CheckCommandAccess(client, "sm_scramble", ADMFLAG_BAN))
 		AddMenuItem(scrambleMenu, "now", "Scramble Teams Now");
 	DisplayMenu(scrambleMenu, client, MENU_TIME_FOREVER);
+}
+
+public Handle_ScrambleFunctionMenu(Handle:functionMenu, MenuAction:action, client, param2)
+{
+	switch (action)
+	{
+		case MenuAction_Select:
+		{
+			decl String:sOption[2];
+			GetMenuItem(functionMenu, param2, sOption, sizeof(sOption));
+			switch (StringToInt(sOption))
+			{
+				case 0:
+					ShowScrambleSelectionMenu(client);
+				case 1:
+					ShowScrambleVoteMenu(client);
+				case 2:
+					PerformReset(client);
+				case 3:
+					PerformBalance(client);
+				case 4: 
+					PerformCancel(client);
+			}
+		}
+		case MenuAction_Cancel:
+		{
+			if (param2 == MenuCancel_ExitBack )
+				RedisplayAdminMenu(g_hAdminMenu, client);
+		}		
+		case MenuAction_End:
+			CloseHandle(functionMenu);
+	}
 }
 
 public Handle_ScrambleVote(Handle:scrambleVoteMenu, MenuAction:action, client, param2)
