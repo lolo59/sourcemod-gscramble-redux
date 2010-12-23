@@ -2599,6 +2599,11 @@ stock bool:IsValidSpectator(client)
 			{
 				return true;
 			}
+			new Float:fTime = GetClientTime(client);
+			if (fTime <= 60.0)
+			{
+				return true;
+			}
 		}
 	}
 	return false;
