@@ -1,12 +1,3 @@
-#if defined _hlxce_sm_sql_api_included
- #endinput
-#endif
-#define _hlxce_sm_sql_api_included
-
-
-#define HLXCE_SM_SQL_API_VERSION 1
-
-
 enum HLXCE_PlayerData
 {
 	PData_Skill,
@@ -49,16 +40,16 @@ forward HLXCE_OnClientReady(client);
  * @param		client		Client index
  * @noreturn
  */
-forward HLXCE_OnGotPlayerData(client, const PData[HLXCE_PlayerData]);
+forward HLXCE_OnGotPlayerData(client, const HLXCE_PlayerData:PData[]);
 
 
 stock Float:HLXCE_kpd(kills, deaths)
 {
-	return FloatDiv(float(kills)/float((deaths==0)?1:deaths));
+	return FloatDiv(Float:kills/Float:((deaths==0)?1:deaths));
 }
 
 
 stock Float:HLXCE_accuracy(shots, hits)
 {
-	return FloatDiv(float(shots)/float((hits==0)?1:hits));
+	return FloatDiv(Float:shots/Float:((hits==0)?1:hits));
 }
