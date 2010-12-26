@@ -2494,7 +2494,7 @@ bool:IsValidTarget(client, e_ImmunityModes:mode)
 {
 	if (IsFakeClient(client))
 	{
-		if (GetConVarBool(cvar_AbHumanOnly))
+		if (mode != scramble && GetConVarBool(cvar_AbHumanOnly))
 		{
 			return false;
 		}
