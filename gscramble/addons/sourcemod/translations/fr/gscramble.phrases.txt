@@ -245,4 +245,8 @@
 	{
 		"fr"		"Argument de commande invalide"
 	}
+	"StatsMessage"
+	{
+		"fr"		"Scramble a echangé {1} sur {2} joueurs. {3}%"
+	}
 }
