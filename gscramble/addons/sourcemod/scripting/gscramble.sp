@@ -1396,7 +1396,7 @@ public Action:timer_Restore(Handle:timer, any:id)
 		ChangeClientTeam(client, g_iTeamIds[iIndex]);
 		ShowVGUIPanel(client, "team", _, false);
 		PrintToChat(client, "\x01\x04[SM]\x01 %t", "TeamRestore");
-		ShowVGUIPanel(client, g_iTeamIds[iIndex] == TEAM_BLUE ? "class_blue" : "class_red");
+		TF2_SetPlayerClass(client, TFClass_Scout);
 		LogAction(client, -1, "\"%L\" has had his/her old team restored after reconnecting.", client);
 		RestoreMenuCheck(client, g_iTeamIds[iIndex]);
 	}
@@ -1593,14 +1593,23 @@ BalanceTeams(bool:respawn=true)
 	for (new i = 0; swaps-- > 0 && i < counter; i++)
 	{
 		if (iFatTeam[i][0])
-		{
+		{	
+			new bWasSpec = false;			
+			if (GetClientTeam(iFatTeam[i][0]) == 1)
+			{
+				bWasSpec = true;
+			}
 			new String:clientName[MAX_NAME_LENGTH + 1], String:sTeam[4];
 			GetClientName(iFatTeam[i][0], clientName, 32);
 			if (team == TEAM_RED)
 				sTeam = "Blu";
 			else
-				sTeam = "Red";			
+				sTeam = "Red";				
 			ChangeClientTeam(iFatTeam[i][0], team == TEAM_BLUE ? TEAM_RED : TEAM_BLUE);
+			if (bWasSpec)
+			{
+				TF2_SetPlayerClass(iFatTeam[i][0], TFClass_Scout);
+			}
 			PrintToChatAll("\x01\x04[SM]\x01 %t", "TeamChangedAll", clientName, sTeam);
 			SetupTeamSwapBlock(iFatTeam[i][0]);
 			LogAction(iFatTeam[i][0], -1, "\"%L\" has been force-balanced to %s.", iFatTeam[i][0], sTeam);			
@@ -2813,6 +2822,10 @@ stock ScramblePlayers(e_ScrambleModes:scrambleMode)
 			iSwaps++;
 			PrintCenterText(client, "%t", "TeamChangedOne");
 		}
+		if (iTempTeam == 1)
+		{
+			TF2_SetPlayerClass(client, TFClass_Scout);
+		}
 	}
 	g_bBlockDeath = false;
 	LogMessage("Scramble changed %i client's teams", iSwaps);
@@ -2851,6 +2864,7 @@ stock ForceSpecToTeam()
 				if (iDiff && IsClientInGame(i) && IsValidSpectator(i))
 				{
 					ChangeClientTeam(i, iLarger == TEAM_RED ? TEAM_BLUE : TEAM_RED);
+					TF2_SetPlayerClass(i, TFClass_Scout);
 					iSwapped = i;
 					iDiff--;
 				}
@@ -2862,6 +2876,7 @@ stock ForceSpecToTeam()
 			if (IsClientInGame(i) && IsValidSpectator(i))
 			{
 				ChangeClientTeam(i, boolyBool ? TEAM_RED:TEAM_BLUE);
+				TF2_SetPlayerClass(i, TFClass_Scout);
 				boolyBool = !boolyBool;
 			}
 		}		
@@ -3251,8 +3266,17 @@ public Action:timer_AfterScramble(Handle:timer, any:spawn)
 	{
 		for (new i = 1; i <= MaxClients; i++)
 		{
-			if (IsClientInGame(i) && IsValidTeam(i)	&& !IsPlayerAlive(i))
-				TF2_RespawnPlayer(i);		
+			if (IsClientInGame(i) && IsValidTeam(i))
+			{
+				if (!IsPlayerAlive(i))
+				{
+					TF2_RespawnPlayer(i);
+				}
+				if (TF2_GetPlayerClass(i) == TFClass_Unknown)
+				{
+					TF2_SetPlayerClass(i, TFClass_Scout);
+				}
+			}
 		}
 	}
 		
