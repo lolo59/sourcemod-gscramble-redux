@@ -246,4 +246,8 @@
 	{
 		"es"		"Argumento de comando inválido."
 	}
+	"StatsMessage"
+	{
+		"es"		"La mezcla de equipos trasladó {1} de {2} jugadores. {3}%"
+	}
 }
