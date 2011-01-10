@@ -3530,9 +3530,11 @@ stock bool:TF2_IsClientUberCharged(client)
 
 stock bool:TF2_IsClientUbered(client)
 {
-	if (((GetEntProp(client, Prop_Send, "m_nPlayerCond")|GetEntProp(client, Prop_Send, "_condition_bits")) & TF_CONDFLAG_UBERCHARGED) == TF_CONDFLAG_UBERCHARGED)
+	if ((TF2_GetPlayerConditionFlags(client) & TF_CONDFLAG_UBERCHARGED) == TF_CONDFLAG_UBERCHARGED)
 		return true; 
-	if (((GetEntProp(client, Prop_Send, "m_nPlayerCond")|GetEntProp(client, Prop_Send, "_condition_bits")) & TF_CONDFLAG_KRITZKRIEGED) == TF_CONDFLAG_KRITZKRIEGED)
+	if ((TF2_GetPlayerConditionFlags(client) & TF_CONDFLAG_KRITZKRIEGED) == TF_CONDFLAG_KRITZKRIEGED)
+		return true;
+	if ((TF2_GetPlayerConditionFlags(client) & TF_CONDFLAG_UBERCHARGEFADE) == TF_CONDFLAG_UBERCHARGEFADE)
 		return true;
 	return false;
 }
@@ -3569,9 +3571,19 @@ public OnLibraryRemoved(const String:name[])
 public OnLibraryAdded(const String:name[])
 {
 	if (StrEqual(name, "hlxce-sm-api"))
-		g_bUseHlxCe = true;
+	{
+		if (GetFeatureStatus(FeatureType_Native, "HLXCE_GetPlayerData") == FeatureStatus_Available)
+		{
+			g_bUseHlxCe = true;
+		}
+	}
 	if (StrEqual(name, "gameme"))
-		g_bUseGameMe = true; 
+	{
+		if (GetFeatureStatus(FeatureType_Native, "QueryGameMEStats") == FeatureStatus_Available)
+		{
+			g_bUseGameMe = true;
+		}
+	}
 }
 
 public OnAdminMenuReady(Handle:topmenu)
