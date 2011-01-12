@@ -435,9 +435,8 @@ RegCommands()
 	AddCommandListener(CMD_Listener, "spectate");
 	
 	RegConsoleCmd("sm_preference",		cmd_Preference);
-	RegConsoleCmd("sm_addbuddy", 		cmd_AddBuddy);
+	RegConsoleCmd("sm_addbuddy", 		cmd_AddBuddy);	
 }
-
 
 public Action:CMD_Listener(client, const String:command[], argc)
 {
@@ -1573,7 +1572,7 @@ BalanceTeams(bool:respawn=true)
 		if (IsValidSpectator(i))
 		{
 			iFatTeam[counter][0] = i;
-			iFatTeam[counter][1] = 9000;
+			iFatTeam[counter][1] = 90;
 			counter++;
 		}
 		else if (GetClientTeam(i) == team) 
@@ -2100,7 +2099,7 @@ public hook_Start(Handle:event, const String:name[], bool:dontBroadcast)
 		new rounds = GetConVarInt(cvar_AutoScrambleRoundCount);
 		if (rounds)
 			g_iRoundTrigger += rounds;
-		StartScrambleDelay(0.1);
+		StartScrambleDelay(0.3);
 	}
 	else if (GetConVarBool(cvar_ForceBalance) && g_hForceBalanceTimer == INVALID_HANDLE)
 	{
