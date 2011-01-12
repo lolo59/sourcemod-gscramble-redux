@@ -443,8 +443,7 @@ public Action:CMD_Listener(client, const String:command[], argc)
 	if (StrEqual(command, "jointeam", false) || StrEqual(command, "spectate", false))
 	{
 		if (client && !IsFakeClient(client))
-		{
-			
+		{	
 			if (g_bBlockJointeam)
 			{
 				if (GetConVarBool(cvar_TeamSwapBlockImmunity))
@@ -472,12 +471,15 @@ public Action:CMD_Listener(client, const String:command[], argc)
 				}
 				if (IsBlocked(client))
 				{
-					if (TeamsUnbalanced(false) && (StrEqual(sArg, "blue", false) || StrEqual(sArg, "red", false) || StringToInt(sArg) >= 2))
+					if ((StrEqual(sArg, "blue", false) || StrEqual(sArg, "red", false) || StringToInt(sArg) >= 2))
 					{
+						if (TeamsUnbalanced(false))
+						{
 						/**
 						allow clients to change teams during imbalances
 						*/
 						return Plugin_Continue;
+						}
 					}
 					HandleStacker(client);
 					return Plugin_Handled;
@@ -1547,11 +1549,7 @@ stock GetLargerTeam()
 	{
 		return TEAM_RED;
 	}
-	else if (GetTeamClientCount(TEAM_BLUE) > GetTeamClientCount(TEAM_RED))
-	{
-		return TEAM_BLUE;
-	}
-	return 0;
+	return TEAM_BLUE;
 }
 
 BalanceTeams(bool:respawn=true)
@@ -4117,4 +4115,9 @@ public SortIntsDesc(x[], y[], array[][], Handle:data)		// this sorts everything 
     else if (x[1] < y[1]) 
 		return 1;    
     return 0;
+}
+
+stock GetSmallerTeam()
+{
+	return GetLargerTeam() == TEAM_RED ? TEAM_BLUE:TEAM_RED;
 }
