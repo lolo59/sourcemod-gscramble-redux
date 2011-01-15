@@ -3539,11 +3539,9 @@ stock bool:TF2_IsClientUberCharged(client)
 
 stock bool:TF2_IsClientUbered(client)
 {
-	if ((TF2_GetPlayerConditionFlags(client) & TF_CONDFLAG_UBERCHARGED) == TF_CONDFLAG_UBERCHARGED)
-		return true; 
-	if ((TF2_GetPlayerConditionFlags(client) & TF_CONDFLAG_KRITZKRIEGED) == TF_CONDFLAG_KRITZKRIEGED)
-		return true;
-	if ((TF2_GetPlayerConditionFlags(client) & TF_CONDFLAG_UBERCHARGEFADE) == TF_CONDFLAG_UBERCHARGEFADE)
+	new bits = TF2_GetPlayerConditionFlags(client);
+	
+	if (bits & TF_CONDFLAG_UBERCHARGED || bits & TF_CONDFLAG_KRITZKRIEGED || bits & TF_CONDFLAG_UBERCHARGEFADE)
 		return true;
 	return false;
 }
