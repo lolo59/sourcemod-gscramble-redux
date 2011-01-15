@@ -2282,14 +2282,14 @@ public Action:Event_PlayerDeath_Pre(Handle:event, const String:name[], bool:dont
 	if (g_RoundState != normal || GetEventInt(event, "death_flags") & 32) 
 		return Plugin_Continue;		
 	new k_client = GetClientOfUserId(GetEventInt(event, "attacker"));
-	if (k_client && IsClientInGame(k_client) && g_bBlockDeath)
+	new	v_client = GetClientOfUserId(GetEventInt(event, "userid"));
+	if (k_client && IsClientInGame(k_client) && k_client != v_client && g_bBlockDeath)
 	{
 		g_bBlockDeath = false;
 		LogError("Death block error detected, alert the plugin's author.");
 	}
 	if (g_bBlockDeath) 
 		return Plugin_Handled;
-	new	v_client = GetClientOfUserId(GetEventInt(event, "userid"));
 	g_aPlayers[k_client][iFrags]++;
 	g_aPlayers[v_client][iDeaths]++;
 	if (IsOkToBalance() && g_bAutoBalance && g_aTeams[bImbalanced] && GetClientTeam(v_client) == GetLargerTeam())	
