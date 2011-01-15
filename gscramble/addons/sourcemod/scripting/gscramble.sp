@@ -2290,14 +2290,13 @@ public Action:Event_PlayerDeath_Pre(Handle:event, const String:name[], bool:dont
 	}
 	if (g_bBlockDeath) 
 		return Plugin_Handled;
-	g_aPlayers[k_client][iFrags]++;
-	g_aPlayers[v_client][iDeaths]++;
 	if (IsOkToBalance() && g_bAutoBalance && g_aTeams[bImbalanced] && GetClientTeam(v_client) == GetLargerTeam())	
 		CreateTimer(0.1, timer_StartBalanceCheck, v_client, TIMER_FLAG_NO_MAPCHANGE);
 		
 	if (!k_client || k_client == v_client || k_client > MaxClients)
 		return Plugin_Continue;
-		
+	g_aPlayers[k_client][iFrags]++;
+	g_aPlayers[v_client][iDeaths]++;
 	GetClientTeam(k_client) == TEAM_RED ? (g_aTeams[iRedFrags]++) : (g_aTeams[iBluFrags]++);	
 	return Plugin_Continue;
 }
