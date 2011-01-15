@@ -1430,6 +1430,10 @@ public OnMapStart()
 	PrecacheSound(SCRAMBLE_SOUND, true);
 	PrecacheSound(EVEN_SOUND, true);
 	g_hBalanceFlagTimer = INVALID_HANDLE;
+	if (g_hForceBalanceTimer != INVALID_HANDLE)
+	{
+		KillTimer(g_hForceBalanceTimer);
+	}
 	g_hForceBalanceTimer = INVALID_HANDLE;
 	g_hCheckTimer = INVALID_HANDLE;
 	if (g_hScrambleNowPack != INVALID_HANDLE)
@@ -2198,7 +2202,7 @@ stock StartForceTimer()
 	{
 		return;
 	}
-	g_hForceBalanceTimer = CreateTimer(fDelay, Timer_ForceBalance, TIMER_FLAG_NO_MAPCHANGE);
+	g_hForceBalanceTimer = CreateTimer(fDelay, Timer_ForceBalance);
 }
 
 public hook_Win(Handle:event, const String:name[], bool:dontBroadcast)
