@@ -47,7 +47,7 @@ $Copyright: (c) TftTmng 2008-2011$
 #include <hlxce-sm-api>
 #define REQUIRE_PLUGIN
 
-#define VERSION "3.0.1"
+#define VERSION "3.0.2"
 #define TEAM_RED 2
 #define TEAM_BLUE 3
 #define SCRAMBLE_SOUND "vo/announcer_am_teamscramble03.wav"
@@ -1560,9 +1560,10 @@ BalanceTeams(bool:respawn=true)
 	}
 	
 	new team = GetLargerTeam(), counter,
-		smallTeam = team == TEAM_RED?TEAM_BLUE:TEAM_RED,
-		swaps = GetAbsValue(GetTeamClientCount(TEAM_RED), GetTeamClientCount(TEAM_BLUE)) / 2;
-	decl iFatTeam[GetTeamClientCount(team)][2];
+		smallTeam = GetSmallerTeam(),
+		swaps = GetAbsValue(GetTeamClientCount(TEAM_RED), GetTeamClientCount(TEAM_BLUE)) / 2,
+		iTeamSize = GetTeamClientCount(team);
+	new iFatTeam[iTeamSize][2];
 	for (new i = 1; i <= MaxClients; i++) 
 	{
 		if (!IsClientInGame(i))
@@ -1575,17 +1576,23 @@ BalanceTeams(bool:respawn=true)
 		}
 		else if (GetClientTeam(i) == team) 
 		{
-			if (GetConVarBool(cvar_Preference) && g_aPlayers[i][iTeamPreference] == smallTeam && !TF2_IsClientUbered(i))				
-				iFatTeam[counter][1] = 3;			
+			if (GetConVarBool(cvar_Preference) && g_aPlayers[i][iTeamPreference] == smallTeam && !TF2_IsClientUbered(i))
+			{
+				iFatTeam[counter][1] = 3;
+			}
 			else if (IsValidTarget(i, balance))
+			{
 				iFatTeam[counter][1] = GetPlayerPriority(i);
+			}
 			else
+			{
 				iFatTeam[counter][1] = -5;
+			}
 			iFatTeam[counter][0] = i;
 			counter++;
 		}
 	}	
-	SortCustom2D(iFatTeam, counter, SortIntsDesc); // sort the array so low prio players are on the bottom
+	SortCustom2D(iFatTeam, iTeamSize, SortIntsDesc); // sort the array so low prio players are on the bottom
 	g_bBlockDeath = true;	
 	for (new i = 0; swaps-- > 0 && i < counter; i++)
 	{
@@ -2268,14 +2275,16 @@ bool:WinStreakCheck(winningTeam)
 
 public Action:Event_PlayerDeath_Pre(Handle:event, const String:name[], bool:dontBroadcast) 
 {
+	if (g_RoundState != normal || GetEventInt(event, "death_flags") & 32) 
+		return Plugin_Continue;		
+	new k_client = GetClientOfUserId(GetEventInt(event, "attacker"));
+	if (k_client && IsClientInGame(k_client) && g_bBlockDeath)
+	{
+		g_bBlockDeath = false;
+		LogError("Death block error detected, alert the plugin's author.");
+	}
 	if (g_bBlockDeath) 
 		return Plugin_Handled;
-		
-	if (g_RoundState != normal || GetEventInt(event, "death_flags") & 32) 
-		return Plugin_Continue;
-		
-	new k_client = GetClientOfUserId(GetEventInt(event, "attacker"));
-		
 	new	v_client = GetClientOfUserId(GetEventInt(event, "userid"));
 	g_aPlayers[k_client][iFrags]++;
 	g_aPlayers[v_client][iDeaths]++;
