@@ -47,7 +47,7 @@ $Copyright: (c) TftTmng 2008-2011$
 #include <hlxce-sm-api>
 #define REQUIRE_PLUGIN
 
-#define VERSION "3.0.2"
+#define VERSION "3.0.22"
 #define TEAM_RED 2
 #define TEAM_BLUE 3
 #define SCRAMBLE_SOUND "vo/announcer_am_teamscramble03.wav"
@@ -1339,7 +1339,7 @@ public HLXCE_OnClientReady(client)
 	HLXCE_GetPlayerData(client);
 }
 
-public HLXCE_OnGotPlayerData(client, const HLXCE_PlayerData:PData[])
+public HLXCE_OnGotPlayerData(client, const PData[HLXCE_PlayerData])
 {
 	g_aPlayers[client][iHlxCe_Rank] = PData[PData_Rank];
 	g_aPlayers[client][iHlxCe_Skill] = PData[PData_Skill];
