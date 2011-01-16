@@ -1429,6 +1429,10 @@ public OnMapStart()
 	g_iVotes = 0;
 	PrecacheSound(SCRAMBLE_SOUND, true);
 	PrecacheSound(EVEN_SOUND, true);
+	if (g_hBalanceFlagTimer != INVALID_HANDLE)
+	{
+		KillTimer(g_hBalanceFlagTimer);
+	}
 	g_hBalanceFlagTimer = INVALID_HANDLE;
 	if (g_hForceBalanceTimer != INVALID_HANDLE)
 	{
@@ -2195,8 +2199,8 @@ stock StartForceTimer()
 	if (g_hForceBalanceTimer != INVALID_HANDLE)
 	{
 		KillTimer(g_hForceBalanceTimer);
+		g_hForceBalanceTimer = INVALID_HANDLE;
 	}
-	g_hForceBalanceTimer = INVALID_HANDLE;
 	new Float:fDelay;
 	if (1 > (fDelay = GetConVarFloat(cvar_MaxUnbalanceTime)))
 	{
