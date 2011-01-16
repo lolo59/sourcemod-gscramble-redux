@@ -2282,9 +2282,7 @@ bool:WinStreakCheck(winningTeam)
 }
 
 public Action:Event_PlayerDeath_Pre(Handle:event, const String:name[], bool:dontBroadcast) 
-{
-	if (g_RoundState != normal || GetEventInt(event, "death_flags") & 32) 
-		return Plugin_Continue;		
+{	
 	new k_client = GetClientOfUserId(GetEventInt(event, "attacker"));
 	new	v_client = GetClientOfUserId(GetEventInt(event, "userid"));
 	if (k_client && IsClientInGame(k_client) && k_client != v_client && g_bBlockDeath)
@@ -2294,6 +2292,8 @@ public Action:Event_PlayerDeath_Pre(Handle:event, const String:name[], bool:dont
 	}
 	if (g_bBlockDeath) 
 		return Plugin_Handled;
+	if (g_RoundState != normal || GetEventInt(event, "death_flags") & 32) 
+		return Plugin_Continue;	
 	if (IsOkToBalance() && g_bAutoBalance && g_aTeams[bImbalanced] && GetClientTeam(v_client) == GetLargerTeam())	
 		CreateTimer(0.1, timer_StartBalanceCheck, v_client, TIMER_FLAG_NO_MAPCHANGE);
 		
