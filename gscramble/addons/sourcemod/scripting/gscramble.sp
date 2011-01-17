@@ -2677,7 +2677,7 @@ Float:GetClientScrambleScore(client, e_ScrambleModes:mode)
 	}
 	if (mode == gameMe_SkillChange)
 	{
-		return float(g_aPlayers[client][iGameMe_SkillChange]);
+		return FloatDiv(float(g_aPlayers[client][iGameMe_SkillChange]), GetClientTime(client));
 	}
 	if (mode == hlxCe_Rank)
 	{
