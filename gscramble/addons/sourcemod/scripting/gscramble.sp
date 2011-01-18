@@ -37,14 +37,22 @@ $Copyright: (c) TftTmng 2008-2011$
 #include <tf2>
 #include <tf2_stocks>
 
+
 #undef REQUIRE_EXTENSIONS
 #include <clientprefs>
 #define REQUIRE_EXTENSIONS
 
+#define GAMEME_INCLUDED
+#define HLXCE_INCLUDED
+
 #undef REQUIRE_PLUGIN
 #include <adminmenu>
+#if defined GAMEME_INCLUDED
 #include <gameme>
+#endif
+#if defined HLXCE_INCLUDED
 #include <hlxce-sm-api>
+#endif
 #define REQUIRE_PLUGIN
 
 #define VERSION "3.0.23"
@@ -125,8 +133,10 @@ new Handle:cvar_Version				= INVALID_HANDLE,
 
 new Handle:g_hAdminMenu 			= INVALID_HANDLE,
 	Handle:g_hScrambleVoteMenu 		= INVALID_HANDLE,
-	Handle:g_hScrambleNowPack		= INVALID_HANDLE,
-	Handle:g_hGameMeUpdateTimer 	= INVALID_HANDLE;
+	Handle:g_hScrambleNowPack		= INVALID_HANDLE;
+#if defined GAMEME_INCLUDED
+new Handle:g_hGameMeUpdateTimer 	= INVALID_HANDLE;
+#endif
 
 /**
 timer handles
@@ -893,6 +903,7 @@ public OnConfigsExecuted()
 	{
 		g_bBlockJointeam = false;
 	}
+#if defined GAMEME_INCLUDED
 	if (g_bUseGameMe && e_ScrambleModes:GetConVarInt(cvar_SortMode) == gameMe_SkillChange)
 	{
 		StartSkillUpdates();
@@ -901,6 +912,7 @@ public OnConfigsExecuted()
 	{
 		StopSkillUpdates();
 	}
+#endif
 }
 
 public Action:Timer_VoteAd(Handle:timer)
@@ -947,7 +959,7 @@ public handler_ConVarChange(Handle:convar, const String:oldValue[], const String
 			LogAction(0, -1, "set conVar mp_autoteambalance to %i.", teamBalance);
 		}
 	}
-	
+#if defined GAMEME_INCLUDED
 	if (convar == cvar_SortMode)
 	{
 		if (g_bUseGameMe && e_ScrambleModes:iNewValue == gameMe_SkillChange)
@@ -959,7 +971,7 @@ public handler_ConVarChange(Handle:convar, const String:oldValue[], const String
 			StopSkillUpdates();
 		}
 	}
-	
+#endif	
 	if (convar == cvar_FullRoundOnly)
 		iNewValue == 1 ? (g_bFullRoundOnly = true) : (g_bFullRoundOnly = false);
 	
@@ -984,6 +996,7 @@ public handler_ConVarChange(Handle:convar, const String:oldValue[], const String
 		g_bNoSequentialScramble = iNewValue?true:false;
 }
 
+#if defined GAMEME_INCLUDED
 stock StartSkillUpdates()
 {
 	if (g_hGameMeUpdateTimer != INVALID_HANDLE)
@@ -1010,6 +1023,7 @@ stock StopSkillUpdates()
 	}
 }
 
+
 stock UpdateSessionSkill()
 {
 	if (GetFeatureStatus(FeatureType_Native, "QueryGameMEStats") == FeatureStatus_Available)
@@ -1027,6 +1041,7 @@ stock UpdateSessionSkill()
 		g_bUseGameMe = false;
 	}
 }
+#endif
 
 hook()
 {
@@ -1210,6 +1225,7 @@ public hook_Event_GameStart(Handle:event, const String:name[], bool:dontBroadcas
 	g_aTeams[iBluWins] = 0;
 }
 
+#if defined GAMEME_INCLUDED
 public OnClientPutInServer(client)
 {
 	if (IsFakeClient(client))
@@ -1227,8 +1243,11 @@ public OnClientPutInServer(client)
 			g_bUseGameMe = false;
 		}
 	}
-}
 
+}
+#endif
+
+#if defined GAMEME_INCLUDED
 public QuerygameMEStatsCallback(command, payload, client, const total_cell_values[], const Float: total_float_values[], 
 		const session_cell_values[], const Float: session_float_values[],
 		const String: session_fav_weapon[], const global_cell_values[],
@@ -1243,6 +1262,7 @@ public QuerygameMEStatsCallback(command, payload, client, const total_cell_value
 		g_aPlayers[client][iGameMe_SkillChange] = session_cell_values[1];
 	}
 }
+#endif
 
 public OnClientDisconnect(client)
 {
@@ -1334,6 +1354,7 @@ public OnClientPostAdminCheck(client)
 	g_iVotesNeeded = RoundToFloor(float(g_iVoters) * GetConVarFloat(cvar_PublicNeeded));
 }
 
+#if defined HLXCE_INCLUDED
 public HLXCE_OnClientReady(client)
 {
 	HLXCE_GetPlayerData(client);
@@ -1344,6 +1365,7 @@ public HLXCE_OnGotPlayerData(client, const PData[HLXCE_PlayerData])
 	g_aPlayers[client][iHlxCe_Rank] = PData[PData_Rank];
 	g_aPlayers[client][iHlxCe_Skill] = PData[PData_Skill];
 }
+#endif
 
 public OnClientCookiesCached(client)
 {
