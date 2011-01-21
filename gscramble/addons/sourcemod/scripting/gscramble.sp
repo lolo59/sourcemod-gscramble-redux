@@ -1,4 +1,4 @@
-/********9****************************************************************
+/************************************************************************
 *************************************************************************
 gScramble
 Description:
@@ -28,7 +28,7 @@ $Date$
 $LastChangedBy$
 $LastChangedDate$
 $URL$
-$Copyright: (c) TftTmng 2008-2011$
+$Copyright: (c) Tf2Tmng 2009-2011$
 *************************************************************************
 *************************************************************************
 */
@@ -42,6 +42,9 @@ $Copyright: (c) TftTmng 2008-2011$
 #include <clientprefs>
 #define REQUIRE_EXTENSIONS
 
+/**
+delete these 2 lines if you want to compile without those thingies.
+*/
 #define GAMEME_INCLUDED
 #define HLXCE_INCLUDED
 
@@ -1454,13 +1457,14 @@ public OnMapStart()
 	if (g_hBalanceFlagTimer != INVALID_HANDLE)
 	{
 		KillTimer(g_hBalanceFlagTimer);
-	}
-	g_hBalanceFlagTimer = INVALID_HANDLE;
+		g_hBalanceFlagTimer = INVALID_HANDLE;	}
+	
 	if (g_hForceBalanceTimer != INVALID_HANDLE)
 	{
 		KillTimer(g_hForceBalanceTimer);
+		g_hForceBalanceTimer = INVALID_HANDLE;
 	}
-	g_hForceBalanceTimer = INVALID_HANDLE;
+	
 	g_hCheckTimer = INVALID_HANDLE;
 	if (g_hScrambleNowPack != INVALID_HANDLE)
 		CloseHandle(g_hScrambleNowPack);
@@ -2192,13 +2196,13 @@ public hook_Start(Handle:event, const String:name[], bool:dontBroadcast)
 	forces balance if teams stay unbalacned too long
 */
 public Action:Timer_ForceBalance(Handle:timer)
-{	
-	if (TeamsUnbalanced())
+{
+	g_hForceBalanceTimer = INVALID_HANDLE;
+	if (TeamsUnbalanced(false))
 	{
 		BalanceTeams(true);
 	}
 	g_aTeams[bImbalanced] = false;
-	g_hForceBalanceTimer = INVALID_HANDLE;
 	return Plugin_Handled;
 }
 
