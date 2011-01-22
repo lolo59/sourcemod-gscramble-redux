@@ -34,8 +34,8 @@ $Copyright: (c) Tf2Tmng 2009-2011$
 */
 
 #define PL_VERSION "1.0"
-#define DMG_CLUB (1 << 7)
 #define BONK "vo/scout_specialcompleted03.wav"
+#define DMG_CLUB (1<<7)
 
 #include <sourcemod>
 #include <sdktools>
@@ -69,7 +69,15 @@ public Event_Player_Death(Handle:event, const String:name[], bool:dontBroadcast)
 		{
 			new Float:fPos[3];
 			GetClientAbsOrigin(iKiller, fPos);
-			EmitAmbientSound(BONK, fPos, iKiller);
+			EmitSoundToAll(BONK,
+				 iKiller,
+				 SNDCHAN_AUTO,
+				 SNDLEVEL_NORMAL,
+				 SND_NOFLAGS,
+				 SNDVOL_NORMAL,
+				 SNDPITCH_NORMAL,
+				-1,
+				 fPos);
 		}
 	}
 }
