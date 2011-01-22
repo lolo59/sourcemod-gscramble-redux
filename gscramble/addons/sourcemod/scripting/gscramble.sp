@@ -307,7 +307,7 @@ public Plugin:myinfo =
 	author = "Goerge",
 	description = "A comprehensive team management plugin.",
 	version = VERSION,
-	url = "http://www.fpsbanana.com"
+	url = "http://tf2tmng.googlecode.com/"
 };
 
 public OnPluginStart()
