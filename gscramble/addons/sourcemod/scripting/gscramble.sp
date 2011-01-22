@@ -58,7 +58,7 @@ delete these 2 lines if you want to compile without those thingies.
 #endif
 #define REQUIRE_PLUGIN
 
-#define VERSION "3.0.23"
+#define VERSION "3.0.24"
 #define TEAM_RED 2
 #define TEAM_BLUE 3
 #define SCRAMBLE_SOUND "vo/announcer_am_teamscramble03.wav"
@@ -1586,7 +1586,7 @@ stock GetLargerTeam()
 	return TEAM_BLUE;
 }
 
-BalanceTeams(bool:respawn=true)
+stock BalanceTeams(bool:respawn=true)
 {
 	if (!TeamsUnbalanced(false) || g_bBlockDeath)
 	{
@@ -1665,6 +1665,7 @@ BalanceTeams(bool:respawn=true)
 	}
 	g_bBlockDeath = false;
 	g_aTeams[bImbalanced] = false;
+	return;
 }
 
 public Action:Timer_BalanceSpawn(Handle:timer, any:id)
@@ -1719,7 +1720,7 @@ public Action:cmd_Scramble_Now(client, args)
 	return Plugin_Handled;
 }
 
-PerformScrambleNow(client, Float:fDelay = 5.0, bool:respawn = false, e_ScrambleModes:mode = invalid)
+stock PerformScrambleNow(client, Float:fDelay = 5.0, bool:respawn = false, e_ScrambleModes:mode = invalid)
 {
 	if (!g_bHooked)
 	{
@@ -1745,7 +1746,7 @@ PerformScrambleNow(client, Float:fDelay = 5.0, bool:respawn = false, e_ScrambleM
 	StartScrambleDelay(fDelay, respawn, mode);
 }
 
-AttemptScrambleVote(client)
+stock AttemptScrambleVote(client)
 {	
 	if (g_bArenaMode)
 	{
