@@ -2,7 +2,7 @@
 *************************************************************************
 gScramble
 Description:
-	Automatic scramble and balance script for TF2
+	Automatic scramble and balance script for CSS TF2 and DOD
 *************************************************************************
 *************************************************************************
 
@@ -37,7 +37,6 @@ $Copyright: (c) Tf2Tmng 2009-2011$
 #include <tf2>
 #include <tf2_stocks>
 
-
 #undef REQUIRE_EXTENSIONS
 #include <clientprefs>
 #define REQUIRE_EXTENSIONS
@@ -58,13 +57,11 @@ delete these 2 lines if you want to compile without those thingies.
 #endif
 #define REQUIRE_PLUGIN
 
-#define VERSION "3.0.24"
+#define VERSION "3.0.3"
 #define TEAM_RED 2
 #define TEAM_BLUE 3
 #define SCRAMBLE_SOUND "vo/announcer_am_teamscramble03.wav"
 #define EVEN_SOUND		"vo/announcer_am_teamscramble01.wav"
-
-
 /**
 cvar handles
 */
@@ -300,6 +297,10 @@ new e_RoundState:g_RoundState,
 new g_iTimerEnt;
 new g_iRoundTimer;
 
+#include "gscramble/gscramble_menu_settings.sp"
+#include "gscramble/gscramble_autoscramble.sp"
+#include "gscramble/gscramble_autobalance.sp"
+#include "gscramble/gscramble_tf2_extras.sp"
 
 public Plugin:myinfo = 
 {
@@ -717,15 +718,6 @@ bool:IsBlocked(client)
 	return false;
 }
 
-public TF2_GetRoundTimeLeft(Handle:plugin, numparams)
-{
-	if (g_RoundState == normal)
-	{
-		return g_iRoundTimer;
-	}
-	else return 0;
-}
-
 public Native_GS_IsBlocked(Handle:plugin, numParams)
 {
 	new client = GetNativeCell(1),
@@ -1049,9 +1041,9 @@ stock UpdateSessionSkill()
 hook()
 {
 	LogAction(0, -1, "Hooking events.");
-	HookEvent("teamplay_round_start", 		hook_Start, EventHookMode_PostNoCopy);
+	HookEvent("teamplay_round_start", 		Event_RoundStart, EventHookMode_PostNoCopy);
 	HookEvent("player_disconnect", Event_PlayerDisconnect, EventHookMode_Post);
-	HookEvent("teamplay_round_win", 		hook_Win, EventHookMode_Post);
+	HookEvent("teamplay_round_win", 		Event_RoundWin, EventHookMode_Post);
 	HookEvent("teamplay_setup_finished", 	hook_Setup, EventHookMode_PostNoCopy);
 	HookEvent("player_death", 				Event_PlayerDeath_Pre, EventHookMode_Pre);
 	HookEvent("game_start", 				hook_Event_GameStart);
@@ -1075,8 +1067,8 @@ unHook()
 {
 	LogAction(0, -1, "Unhooking events");
 	UnhookEvent("player_disconnect", Event_PlayerDisconnect, EventHookMode_Post);
-	UnhookEvent("teamplay_round_start", 		hook_Start, EventHookMode_PostNoCopy);
-	UnhookEvent("teamplay_round_win", 		hook_Win, EventHookMode_Post);
+	UnhookEvent("teamplay_round_start", 		Event_RoundStart, EventHookMode_PostNoCopy);
+	UnhookEvent("teamplay_round_win", 		Event_RoundWin, EventHookMode_Post);
 	UnhookEvent("teamplay_setup_finished", 	hook_Setup, EventHookMode_PostNoCopy);
 	UnhookEvent("player_death", 				Event_PlayerDeath_Pre, EventHookMode_Pre);
 	UnhookEvent("game_start", 				hook_Event_GameStart);
@@ -1494,11 +1486,11 @@ public Action:TimerEnable(Handle:timer)
 
 public Action:cmd_ResetVotes(client, args)
 {
-	PerformReset(client);
+	PerformVoteReset(client);
 	return Plugin_Handled;
 }
 
-PerformReset(client)
+PerformVoteReset(client)
 {
 	LogAction(client, -1, "\"%L\" has reset all the public votes", client);
 	ShowActivity(client, "%t", "AdminResetVotes");
@@ -1575,110 +1567,6 @@ Float:GetAvgScoreDifference(team)
 	if (otherAvg > teamAvg)
 		return 0.0;
 	return FloatAbs(teamAvg - otherAvg);
-}
-
-stock GetLargerTeam()
-{
-	if (GetTeamClientCount(TEAM_RED) > GetTeamClientCount(TEAM_BLUE))
-	{
-		return TEAM_RED;
-	}
-	return TEAM_BLUE;
-}
-
-stock BalanceTeams(bool:respawn=true)
-{
-	if (!TeamsUnbalanced(false) || g_bBlockDeath)
-	{
-		return;
-	}
-	
-	new team = GetLargerTeam(), counter,
-		smallTeam = GetSmallerTeam(),
-		swaps = GetAbsValue(GetTeamClientCount(TEAM_RED), GetTeamClientCount(TEAM_BLUE)) / 2,
-		iTeamSize = GetTeamClientCount(team);
-	new iFatTeam[iTeamSize][2];
-	for (new i = 1; i <= MaxClients; i++) 
-	{
-		if (!IsClientInGame(i))
-			continue;
-		if (IsValidSpectator(i))
-		{
-			iFatTeam[counter][0] = i;
-			iFatTeam[counter][1] = 90;
-			counter++;
-		}
-		else if (GetClientTeam(i) == team) 
-		{
-			if (GetConVarBool(cvar_Preference) && g_aPlayers[i][iTeamPreference] == smallTeam && !TF2_IsClientUbered(i))
-			{
-				iFatTeam[counter][1] = 3;
-			}
-			else if (IsValidTarget(i, balance))
-			{
-				iFatTeam[counter][1] = GetPlayerPriority(i);
-			}
-			else
-			{
-				iFatTeam[counter][1] = -5;
-			}
-			iFatTeam[counter][0] = i;
-			counter++;
-		}
-	}	
-	SortCustom2D(iFatTeam, iTeamSize, SortIntsDesc); // sort the array so low prio players are on the bottom
-	g_bBlockDeath = true;	
-	for (new i = 0; swaps-- > 0 && i < counter; i++)
-	{
-		if (iFatTeam[i][0])
-		{	
-			new bWasSpec = false;			
-			if (GetClientTeam(iFatTeam[i][0]) == 1)
-			{
-				bWasSpec = true;
-			}
-			new String:clientName[MAX_NAME_LENGTH + 1], String:sTeam[4];
-			GetClientName(iFatTeam[i][0], clientName, 32);
-			if (team == TEAM_RED)
-				sTeam = "Blu";
-			else
-				sTeam = "Red";				
-			ChangeClientTeam(iFatTeam[i][0], team == TEAM_BLUE ? TEAM_RED : TEAM_BLUE);
-			if (bWasSpec)
-			{
-				TF2_SetPlayerClass(iFatTeam[i][0], TFClass_Scout);
-			}
-			PrintToChatAll("\x01\x04[SM]\x01 %t", "TeamChangedAll", clientName, sTeam);
-			SetupTeamSwapBlock(iFatTeam[i][0]);
-			LogAction(iFatTeam[i][0], -1, "\"%L\" has been force-balanced to %s.", iFatTeam[i][0], sTeam);			
-			if (respawn)
-				CreateTimer(0.5, Timer_BalanceSpawn, GetClientUserId(iFatTeam[i][0]), TIMER_FLAG_NO_MAPCHANGE);
-			if (!IsFakeClient(iFatTeam[i][0]))
-			{				
-				new Handle:event = CreateEvent("teamplay_teambalanced_player");
-				SetEventInt(event, "player", iFatTeam[i][0]);
-				g_aPlayers[iFatTeam[i][0]][iBalanceTime] = GetTime() + (GetConVarInt(cvar_BalanceTime) * 60);
-				SetEventInt(event, "team", team == TEAM_BLUE ? TEAM_RED : TEAM_BLUE);
-				FireEvent(event);
-			}
-		}
-	}
-	g_bBlockDeath = false;
-	g_aTeams[bImbalanced] = false;
-	return;
-}
-
-public Action:Timer_BalanceSpawn(Handle:timer, any:id)
-{
-	new client;
-	if ((client = (GetClientOfUserId(id))))
-	{
-		if (!IsPlayerAlive(client))
-		{
-			TF2_RespawnPlayer(client);
-		}
-	}
-	return Plugin_Handled;
 }
 
 public Action:cmd_Scramble_Now(client, args)
@@ -2091,7 +1979,7 @@ SwapPreferences()
 	}	
 }
 
-public hook_Start(Handle:event, const String:name[], bool:dontBroadcast)
+public Event_RoundStart(Handle:event, const String:name[], bool:dontBroadcast)
 {
 	if (g_bTeamsLocked)
 	{
@@ -2102,35 +1990,7 @@ public hook_Start(Handle:event, const String:name[], bool:dontBroadcast)
 	check to see if the previos round warrented a trigger
 	moved to the start event to make checking for map ending uneeded
 	*/
-	new bool:bOkayToCheck = false;
-	if (!g_bScrambleNextRound && g_iVoters >= GetConVarInt(cvar_MinAutoPlayers))
-	{
-		if (g_RoundState == bonusRound)
-		{
-			g_RoundState = normal;
-			if (g_bNoSequentialScramble)
-			{
-				if (!g_bScrambledThisRound)
-				{
-					bOkayToCheck = true;
-				}
-			}
-			else
-			{
-				bOkayToCheck = true;
-			}
-		}
-	}
-	if (bOkayToCheck)
-	{
-		if (WinStreakCheck(g_iLastRoundWinningTeam) || (!g_bScrambleOverride && g_bAutoScramble && AutoScrambleCheck(g_iLastRoundWinningTeam)))
-		{
-			if (GetConVarBool(cvar_AutoscrambleVote))
-				StartScrambleVote(g_iDefMode, 15);
-			else			
-				g_bScrambleNextRound = true;
-		}		
-	}
+	g_bScrambleNextRound = ScrambleCheck();
 	/**
 	execute the trigger
 	*/
@@ -2193,20 +2053,6 @@ public hook_Start(Handle:event, const String:name[], bool:dontBroadcast)
 	g_bScrambledThisRound = false;
 }
 
-/**
-	forces balance if teams stay unbalacned too long
-*/
-public Action:Timer_ForceBalance(Handle:timer)
-{
-	g_hForceBalanceTimer = INVALID_HANDLE;
-	if (TeamsUnbalanced(false))
-	{
-		BalanceTeams(true);
-	}
-	g_aTeams[bImbalanced] = false;
-	return Plugin_Handled;
-}
-
 public Action:hook_Setup(Handle:event, const String:name[], bool:dontBroadcast)
 {
 	g_RoundState = normal;
@@ -2217,26 +2063,7 @@ public Action:hook_Setup(Handle:event, const String:name[], bool:dontBroadcast)
 	return Plugin_Continue;
 }
 
-stock StartForceTimer()
-{
-	if (g_bBlockDeath)
-	{
-		return;
-	}
-	if (g_hForceBalanceTimer != INVALID_HANDLE)
-	{
-		KillTimer(g_hForceBalanceTimer);
-		g_hForceBalanceTimer = INVALID_HANDLE;
-	}
-	new Float:fDelay;
-	if (1 > (fDelay = GetConVarFloat(cvar_MaxUnbalanceTime)))
-	{
-		return;
-	}
-	g_hForceBalanceTimer = CreateTimer(fDelay, Timer_ForceBalance);
-}
-
-public hook_Win(Handle:event, const String:name[], bool:dontBroadcast)
+public Event_RoundWin(Handle:event, const String:name[], bool:dontBroadcast)
 {	
 	g_iRoundTimer = 0;
 	if (GetConVarBool(cvar_ScrLockTeams))
@@ -2269,45 +2096,6 @@ public hook_Win(Handle:event, const String:name[], bool:dontBroadcast)
 	}
 }
 
-bool:WinStreakCheck(winningTeam)
-{
-	if (g_bScrambleNextRound || !g_bWasFullRound)
-		return false;
-	if (GetConVarBool(cvar_AutoScrambleRoundCount) && g_iRoundTrigger == g_iCompleteRounds)
-	{
-		PrintToChatAll("\x01\x04[SM]\x01 %t", "RoundMessage");
-		LogAction(0, -1, "Rount limit reached");
-		return true;
-	}
-	if (!GetConVarBool(cvar_AutoScrambleWinStreak))
-		return false;
-	if (winningTeam == TEAM_RED)
-	{
-		if (g_aTeams[iBluWins] >= 1)
-			g_aTeams[iBluWins] = 0;	
-		g_aTeams[iRedWins]++;
-		if (g_aTeams[iRedWins] >= GetConVarInt(cvar_AutoScrambleWinStreak))
-		{
-			PrintToChatAll("\x01\x04[SM]\x01 %t", "RedStreak");
-			LogAction(0, -1, "Red win limit reached");
-			return true;
-		}
-	}
-	if (winningTeam == TEAM_BLUE)
-	{
-		if (g_aTeams[iRedWins] >= 1)
-			g_aTeams[iRedWins] = 0;
-		g_aTeams[iBluWins]++;
-		if (g_aTeams[iBluWins] >= GetConVarInt(cvar_AutoScrambleWinStreak))
-		{
-			PrintToChatAll("\x01\x04[SM]\x01 %t", "BluStreak");
-			LogAction(0, -1, "Blu win limit reached");
-			return true;
-		}
-	}
-	return false;
-}
-
 public Action:Event_PlayerDeath_Pre(Handle:event, const String:name[], bool:dontBroadcast) 
 {	
 	new k_client = GetClientOfUserId(GetEventInt(event, "attacker"));
@@ -2332,167 +2120,9 @@ public Action:Event_PlayerDeath_Pre(Handle:event, const String:name[], bool:dont
 	return Plugin_Continue;
 }
 
-public Action:timer_StartBalanceCheck(Handle:timer, any:client)
-{
-	if (g_aTeams[bImbalanced] && BalancePlayer(client))
-		CheckBalance(true);
-	return Plugin_Handled;
-}
-
-bool:BalancePlayer(client)
-{
-	if (!TeamsUnbalanced())
-	{
-		return true;
-	}
-	
-	new team, bool:overrider = false, iTime = GetTime();
-	new big = GetLargerTeam();
-	team = big == TEAM_RED?TEAM_BLUE:TEAM_RED;
-	
-	/**
-	checks for preferences to override the client so 
-	*/
-	if (GetConVarBool(cvar_Preference))
-	{
-		for (new i = 1; i <= MaxClients; i++)
-		{
-			if (IsClientInGame(i) && GetClientTeam(i) == big && g_aPlayers[client][iTeamPreference] == team)
-			{
-				overrider = true;
-				client = i;
-				break;
-			}
-		}
-	}
-	
-	if (!overrider)
-	{
-		if (!IsValidTarget(client, balance) || GetPlayerPriority(client) < 0)
-			return false;	
-	}
-	else if (IsPlayerAlive(client))
-		CreateTimer(0.5, Timer_BalanceSpawn, GetClientUserId(client));
-	new String:sName[MAX_NAME_LENGTH + 1], String:sTeam[32];
-	GetClientName(client, sName, 32);
-	team == TEAM_RED ? (sTeam = "RED") : (sTeam = "BLU");
-	g_bBlockDeath = true;
-	ChangeClientTeam(client, team);
-	g_bBlockDeath = false;
-	g_aPlayers[client][iBalanceTime] = iTime + (GetConVarInt(cvar_BalanceTime) * 60);
-	if (!IsFakeClient(client))
-	{
-		new Handle:event = CreateEvent("teamplay_teambalanced_player");
-		SetEventInt(event, "player", client);
-		SetEventInt(event, "team", team);
-		SetupTeamSwapBlock(client);
-		FireEvent(event);
-	}
-	LogAction(client, -1, "\"%L\" has been auto-balanced to %s.", client, sTeam);
-	PrintToChatAll("\x01\x04[SM]\x01 %t", "TeamChangedAll", sName, sTeam);
-	g_aTeams[bImbalanced]=false;
-	return true;
-}
-
-CheckBalance(bool:post=false)
-{
-	if (!g_bHooked)
-		return;
-	if (g_hCheckTimer != INVALID_HANDLE)
-		return;
-	if (!g_bAutoBalance)
-		return;
-	if (g_bBlockDeath)
-	{
-		return;
-	}
-		
-	if (post)
-	{
-		g_hCheckTimer = CreateTimer(0.1, timer_CheckBalance);
-		return;
-	}
-	if (TeamsUnbalanced())
-	{
-		if (IsOkToBalance() && !g_aTeams[bImbalanced] && g_hBalanceFlagTimer == INVALID_HANDLE)
-		{
-			new delay = GetConVarInt(cvar_BalanceActionDelay);
-			if (!g_bSilent && delay > 1)
-			{
-				PrintToChatAll("\x01\x04[SM]\x01 %t", "FlagBalance", delay);
-			}
-			g_hBalanceFlagTimer = CreateTimer(float(delay), timer_BalanceFlag);			
-		}
-		if (g_RoundState == preGame || g_RoundState == bonusRound || g_RoundState == suddenDeath)
-		{
-			if (g_hBalanceFlagTimer != INVALID_HANDLE)
-			{
-				KillTimer(g_hBalanceFlagTimer);
-				g_hBalanceFlagTimer = INVALID_HANDLE;
-			}
-			g_aTeams[bImbalanced] = true;
-		}
-	}
-	else
-	{
-		g_aTeams[bImbalanced] = false;
-		if (g_hBalanceFlagTimer != INVALID_HANDLE)
-		{
-			KillTimer(g_hBalanceFlagTimer);
-			g_hBalanceFlagTimer = INVALID_HANDLE;
-		}
-		
-	}
-}
-
-stock bool:TeamsUnbalanced(bool:force=true)
-{
-	new iDiff = GetAbsValue(GetTeamClientCount(TEAM_RED), GetTeamClientCount(TEAM_BLUE));
-	new iForceLimit = GetConVarInt(cvar_ForceBalanceTrigger);
-	new iBalanceLimit = GetConVarInt(cvar_BalanceLimit);
-	
-	if (iDiff >= iBalanceLimit)
-	{
-		if (force && iForceLimit > 1 && iDiff >= iForceLimit)
-		{
-			BalanceTeams(true);
-
-			if (g_hBalanceFlagTimer != INVALID_HANDLE)
-			{
-				KillTimer(g_hBalanceFlagTimer);
-				g_hBalanceFlagTimer = INVALID_HANDLE;
-			}
-			return false;
-		}
-		return true;
-	}
-	return false;
-}
-
 stock GetAbsValue(value1, value2)
 {
 	return RoundFloat(FloatAbs(FloatSub(float(value1), float(value2))));
-}
-
-/**
-flags the teams as being unbalanced
-*/
-public Action:timer_BalanceFlag(Handle:timer)
-{	
-	if (TeamsUnbalanced())
-	{
-		StartForceTimer();
-		g_aTeams[bImbalanced] = true;
-	}
-	g_hBalanceFlagTimer = INVALID_HANDLE;
-	return Plugin_Handled;
-}
-
-public Action:timer_CheckBalance(Handle:timer)
-{
-	g_hCheckTimer = INVALID_HANDLE;
-	CheckBalance();
-	return Plugin_Handled;
 }
 
 bool:IsNotTopPlayer(client, team)  // this arranges teams based on their score, and checks to see if a client is among the top X players
@@ -2657,13 +2287,6 @@ stock bool:IsValidSpectator(client)
 	}
 	return false;
 }
-
-stock bool:TF2_HasBuilding(client)
-{
-	if (TF2_ClientBuilding(client, "obj_*"))
-		return true;
-	return false;
-}
 			
 stock bool:IsAdmin(client, const String:flags[])
 {
@@ -2674,452 +2297,6 @@ stock bool:IsAdmin(client, const String:flags[])
 	if (bits & iFlags)
 		return true;	
 	return false;
-}
-
-Float:GetClientScrambleScore(client, e_ScrambleModes:mode)
-{
-	if (mode == score)
-	{
-		return float(TF2_GetPlayerResourceData(client, TFResource_TotalScore));
-	}
-	if (mode == kdRatio)
-	{
-		return FloatDiv(float(g_aPlayers[client][iFrags]), float(g_aPlayers[client][iDeaths]));
-	}
-	if (mode == gameMe_Rank)
-	{
-		return float(g_aPlayers[client][iGameMe_Rank]);
-	}
-	if (mode == gameMe_Skill)
-	{
-		return float(g_aPlayers[client][iGameMe_Skill]);
-	}
-	if (mode == gameMe_gRank)
-	{
-		return float(g_aPlayers[client][iGameMe_gRank]);
-	}
-	if (mode == gameMe_gSkill)
-	{
-		return float(g_aPlayers[client][iGameMe_gSkill]);
-	}
-	if (mode == gameMe_SkillChange)
-	{
-		return FloatDiv(float(g_aPlayers[client][iGameMe_SkillChange]), GetClientTime(client));
-	}
-	if (mode == hlxCe_Rank)
-	{
-		return float(g_aPlayers[client][iHlxCe_Rank]);
-	}
-	if (mode == hlxCe_Skill)
-	{
-		return float(g_aPlayers[client][iHlxCe_Skill]);
-	}
-	if (mode == playerClass)
-	{
-		return float(_:TF2_GetPlayerClass(client));
-	}
-	new Float:fScore = float(TF2_GetPlayerResourceData(client, TFResource_TotalScore));
-	fScore = FloatMul(fScore, fScore);
-	if (!IsFakeClient(client))
-	{
-		new Float:fClientTime = GetClientTime(client);
-		new Float:fTime = FloatDiv(fClientTime, 60.0);
-		fScore = FloatDiv(fScore, fTime);
-	}
-	else
-	{
-		fScore = GetRandomFloat(0.0, 1.0);
-	}
-	return fScore;	
-}
-
-/**
-helps decide how many people to swap to the team opposite the team with more
-immune clients
-*/
-stock ScramblePlayers(e_ScrambleModes:scrambleMode)
-{
-	if (scrambleMode == topSwap)
-	{
-		ForceSpecToTeam();
-		PerformTopSwap();
-		BlockAllTeamChange();
-		return;
-	}
-	new i, iCount, iRedImmune, iBluImmune, iSwaps, iTempTeam,
-		bool:bToRed, iImmuneTeam, iImmuneDiff, client;
-	new iValidPlayers[GetClientCount()];
-	
-	/**
-	Start of by getting a list of the valid players and finding out who are immune
-	*/
-	for (i = 1; i <= MaxClients; i++)
-	{
-		if (IsClientInGame(i) && (IsValidTeam(i) || IsValidSpectator(i)))
-		{
-			if (IsValidTarget(i, scramble))
-			{
-				iValidPlayers[iCount] = i;
-				iCount++;
-			}
-			else
-			{
-				if (GetClientTeam(i) == TEAM_RED)
-					iRedImmune++;
-				if (GetClientTeam(i) == TEAM_BLUE)
-					iBluImmune++;
-			}
-		}
-	}
-	if (g_iLastRoundWinningTeam)
-	{
-		bToRed = g_iLastRoundWinningTeam == TEAM_BLUE;
-	}
-	else
-	{
-		bToRed = GetRandomInt(0,1) == 0;
-	}
-	/**
-	handle imbalance in imune teams
-	find out which team has more immune members than the other
-	*/
-	if (iRedImmune != iBluImmune)
-	{
-		if ((iImmuneDiff = (iRedImmune - iBluImmune)) > 0)
-		{
-			iImmuneTeam = TEAM_RED;
-		}
-		else
-		{
-			iImmuneDiff = RoundFloat(FloatAbs(float(iImmuneDiff)));
-			iImmuneTeam = TEAM_BLUE;
-		}
-		bToRed = iImmuneTeam == TEAM_BLUE;
-	}
-	
-	/**
-	setup the swapping
-	*/
-	if (scrambleMode != random)
-	{
-		new Float:scoreArray[iCount][2];
-		for (i = 0; i < iCount; i++)
-		{
-			scoreArray[i][0] = float(iValidPlayers[i]);
-			scoreArray[i][1] = GetClientScrambleScore(iValidPlayers[i], scrambleMode);
-		}		
-		
-		/** 
-		now sort score descending 
-		and copy the array into the integer one
-		*/
-		SortCustom2D(_:scoreArray, iCount, SortScoreAsc);
-		for (i = 0; i < iCount; i++)
-		{
-			iValidPlayers[i] = RoundFloat(scoreArray[i][0]);
-		}	
-	}
-	
-	if (scrambleMode == random)
-	{
-		ForceSpecToTeam();
-		iCount = 0;
-		for (i = 1; i <= MaxClients; i++)
-		{
-			if (IsClientInGame(i) && IsValidTeam(i))
-			{
-				if (IsValidTarget(i, scramble))
-				{
-					iValidPlayers[iCount] = i;
-					iCount++;
-				}
-			}
-		}
-		SortIntegers(iValidPlayers, iCount, Sort_Random);
-		DoRandomSort(iValidPlayers, iCount);
-		BlockAllTeamChange();
-		return;
-	}
-	g_bBlockDeath = true;
-	new iTemp = iSwaps;
-	iImmuneTeam == TEAM_RED ? (bToRed = false):(bToRed = true);
-	for (i = iTemp; i < iCount; i++)
-	{
-		client = iValidPlayers[i];
-		iTempTeam = GetClientTeam(client);
-		if (iImmuneDiff > 0)
-		{
-			ChangeClientTeam(client, iImmuneTeam == TEAM_RED ? TEAM_BLUE:TEAM_RED);
-			iImmuneDiff--;
-		}
-		else
-		{
-			ChangeClientTeam(client, bToRed ? TEAM_RED:TEAM_BLUE);
-			bToRed = !bToRed;
-		}
-		if (GetClientTeam(client) != iTempTeam)
-		{
-			iSwaps++;
-			PrintCenterText(client, "%t", "TeamChangedOne");
-		}
-		if (iTempTeam == 1)
-		{
-			TF2_SetPlayerClass(client, TFClass_Scout);
-		}
-	}
-	g_bBlockDeath = false;
-	LogMessage("Scramble changed %i client's teams", iSwaps);
-	PrintScrambleStats(iSwaps);
-	BlockAllTeamChange();
-}
-
-PrintScrambleStats(swaps)
-{
-	if (GetConVarBool(cvar_PrintScrambleStats))
-	{
-		new Float:fScrPercent = FloatDiv(float(swaps),float(GetClientCount(true)));
-		decl String:sPercent[6];
-		fScrPercent = FloatMul(fScrPercent, 100.0);
-		FloatToString(fScrPercent, sPercent, sizeof(sPercent));
-		PrintToChatAll("\x01\x04[SM]\x01 %t", "StatsMessage", swaps, GetClientCount(true), sPercent);	
-	}
-}
-
-/**
-Force recent spectators onto a team before certain scramble modes
-*/
-stock ForceSpecToTeam()
-{
-	if (!g_bSelectSpectators)
-		return;
-	new iLarger = GetLargerTeam(),
-		iSwapped = 1;
-	if (iLarger)
-	{
-		new iDiff = GetAbsValue(GetTeamClientCount(TEAM_RED), GetTeamClientCount(TEAM_BLUE));	
-		if (iDiff)
-		{
-			for (new i = 1; i< MaxClients; i++)
-			{
-				if (iDiff && IsClientInGame(i) && IsValidSpectator(i))
-				{
-					ChangeClientTeam(i, iLarger == TEAM_RED ? TEAM_BLUE : TEAM_RED);
-					TF2_SetPlayerClass(i, TFClass_Scout);
-					iSwapped = i;
-					iDiff--;
-				}
-			}
-		}
-		new bool:boolyBool;
-		for (new i = iSwapped; i < MaxClients; i++)
-		{
-			if (IsClientInGame(i) && IsValidSpectator(i))
-			{
-				ChangeClientTeam(i, boolyBool ? TEAM_RED:TEAM_BLUE);
-				TF2_SetPlayerClass(i, TFClass_Scout);
-				boolyBool = !boolyBool;
-			}
-		}		
-	}
-}
-			
-	
-
-stock DoRandomSort(array[], count)
-{
-	new iRedSelections,
-		iBluSelections,
-		iRedValidCount,
-		iBluValidCount,
-		iBluCount = GetTeamClientCount(TEAM_BLUE),
-		iRedCount = GetTeamClientCount(TEAM_RED),
-		iTeamDiff, iLargerTeam, iAddToLarger,
-		Float:fSelections = GetConVarFloat(cvar_RandomSelections);
-	new aReds[count][2],
-		aBlus[count][2];
-	for (new i = 0; i < count; i++)
-	{
-		if (!array[i])
-			continue;
-		if (GetClientTeam(array[i]) == TEAM_RED)
-		{
-			aReds[iRedValidCount][0] = array[i];
-			aReds[iRedValidCount][1] = 0;
-			iRedValidCount++;
-		}
-		else
-		{
-			aBlus[iBluValidCount][0] = array[i];
-			aBlus[iBluValidCount][1] = 0;
-			iBluValidCount++;
-		}
-	}
-	iRedSelections = RoundToFloor(FloatDiv(FloatMul(fSelections, (float(iRedCount) + float(iBluCount))), 2.0));
-	iBluSelections = iRedSelections;
-	if ((iTeamDiff = RoundFloat(FloatAbs(FloatSub(float(iRedCount),float(iBluCount))))) >= 2)
-	{
-		iLargerTeam = GetLargerTeam();
-		iAddToLarger = iTeamDiff / 2;
-		iLargerTeam == TEAM_RED ? (iRedSelections += iAddToLarger):(iBluSelections+=iAddToLarger);
-	}
-	if (iRedSelections > iRedValidCount || iBluSelections > iBluValidCount)
-	{
-		if (iRedValidCount > iBluValidCount)
-		{
-			iRedSelections = iBluValidCount;
-		}
-		else if (iBluValidCount > iRedValidCount)
-		{
-			iBluSelections = iRedValidCount;
-		}
-		else
-		{
-			iRedSelections = iRedValidCount;
-			iBluSelections = iBluValidCount;
-		}
-		new iTestRed, iTestBlu, iTestDiff;
-		iTestBlu -= iBluSelections;
-		iTestBlu += iRedSelections;
-		iTestRed -= iRedSelections;
-		iTestRed += iBluSelections;
-		iTestDiff = RoundFloat(FloatAbs(FloatSub(float(iTestRed), float(iTestBlu))));
-		iTestDiff /= 2;
-		if (iTestDiff >= 1)
-		{
-			if (iTestRed > iTestBlu)
-			{
-				iBluSelections -= iTestDiff;
-			}
-			else
-			{
-				iRedSelections -= iTestDiff;
-			}
-		}
-	
-	}
-	SelectRandom(aReds, iRedValidCount, iRedSelections);
-	SelectRandom(aBlus, iBluValidCount, iBluSelections);
-	g_bBlockDeath = true;
-	for (new i = 0; i < count; i++)
-	{
-		if (i < iBluValidCount)
-		{
-			if (aBlus[i][1] == 1 && aBlus[i][0])
-			{
-				ChangeClientTeam(aBlus[i][0], GetClientTeam(aBlus[i][0]) == TEAM_RED ? TEAM_BLUE:TEAM_RED);
-				if (!IsFakeClient(aBlus[i][0]))
-				{
-					PrintCenterText(aBlus[i][0], "%t", "TeamChangedOne");
-				}
-			}
-		}
-		if (i < iRedValidCount)
-		{
-			if (aReds[i][1] == 1 && aReds[i][0])
-			{
-				ChangeClientTeam(aReds[i][0], GetClientTeam(aReds[i][0]) == TEAM_RED ? TEAM_BLUE:TEAM_RED);
-				if (!IsFakeClient(aReds[i][0]))
-				{
-					PrintCenterText(aReds[i][0], "%t", "TeamChangedOne");
-				}
-			}
-		}
-	}
-	g_bBlockDeath = false;
-	PrintScrambleStats(iRedSelections+iBluSelections);
-}
-
-stock SelectRandom(arr[][], size, numSelectsToMake) 
-{ 
-	new temp[size], deselected;	 
-	while(numSelectsToMake-- > 0) 
-	{ 
-		deselected = 0; 
-		for(new i = 0; i < size; i++)
-		{
-			if (!arr[i][1]) 
-			{
-				temp[deselected++] = i;
-			}
-		}
-		if (!deselected)
-		{
-			return;
-		}
-		new n = GetRandomInt(0, deselected - 1); 
-		arr[temp[n]][1] = 1;
-	}
-} 
-
-stock PerformTopSwap()
-{
-	g_bBlockDeath = true;
-	new iTeam1 = GetTeamClientCount(TEAM_RED),
-		iTeam2 = GetTeamClientCount(TEAM_BLUE),
-		iSwaps = GetConVarInt(cvar_TopSwaps),
-		iArray1[MaxClients][2],
-		iArray2[MaxClients][2],
-		iCount1,
-		iCount2;
-	if (iSwaps > iTeam1 || iSwaps > iTeam2)
-	{
-		if (iTeam1 > iTeam2)
-		{
-			iSwaps = iTeam2 / 2;
-		}
-		else
-		{
-			iSwaps = iTeam1 / 2;
-		}
-	}
-	for (new i = 1; i <= MaxClients; i++)
-	{
-		if (IsClientInGame(i) && IsValidTarget(i, scramble))
-		{
-			if (GetClientTeam(i) == TEAM_RED)
-			{
-				iArray1[iCount1][0] = i;
-				iArray1[iCount1][1] = RoundFloat(GetClientScrambleScore(i, score));
-				iCount1++;
-			}
-			else if (GetClientTeam(i) == TEAM_BLUE)
-			{
-				iArray2[iCount2][0] = i;
-				iArray2[iCount2][1] = RoundFloat(GetClientScrambleScore(i, score));
-				iCount2++;
-			}
-		}
-	}
-	if (!iCount1 || !iCount2)
-	{
-		return;
-	}
-	SortCustom2D(iArray1, iCount1, SortIntsDesc);
-	SortCustom2D(iArray2, iCount2, SortIntsDesc);
-	for (new i = 0; i < iSwaps; i++)
-	{		
-		if (iArray1[i][0])
-		{
-			ChangeClientTeam(iArray1[i][0], TEAM_BLUE);
-			if (!IsFakeClient(iArray1[i][0]))
-			{
-				PrintCenterText(iArray1[i][0], "%t", "TeamChangedOne");
-			}
-		}
-	}
-	for (new i = 0; i < iSwaps; i++)
-	{
-		if (iArray2[i][0])
-		{
-			ChangeClientTeam(iArray2[i][0], TEAM_RED);
-			if (!IsFakeClient(iArray2[i][0]))
-			{
-				PrintCenterText(iArray2[i][0], "%t", "TeamChangedOne");
-			}
-		}
-	}
-	g_bBlockDeath = false;
-	PrintScrambleStats(iSwaps*2);	
 }
 
 stock BlockAllTeamChange()
@@ -3137,215 +2314,6 @@ stock BlockAllTeamChange()
 		SetupTeamSwapBlock(i);
 	}
 }
-		
-public Action:timer_ScrambleDelay(Handle:timer, any:data)  // scramble logic
-{
-	g_hScrambleDelay = INVALID_HANDLE;
-	g_bScrambleNextRound = false;
-	g_bScrambledThisRound = true;
-	ResetPack(data);
-	new respawn = ReadPackCell(data),
-		e_ScrambleModes:scrambleMode = e_ScrambleModes:ReadPackCell(data);
-	g_aTeams[iRedWins] = 0;
-	g_aTeams[iBluWins] = 0;
-	g_aTeams[bImbalanced] = false;	
-	if (g_bPreGameScramble)
-	{
-		scrambleMode = random;
-	}
-	else
-	{
-		if (gameMe_Rank <= scrambleMode <= gameMe_SkillChange && !g_bUseGameMe)
-		{
-			LogError("GameMe function set in CFG, but GameMe is not loaded");
-			scrambleMode = randomSort;
-		}
-		
-		if ((scrambleMode == hlxCe_Rank || scrambleMode == hlxCe_Skill) && !g_bUseHlxCe)
-		{
-			LogError("HLXCE function set in CFG, but HLXCE is not loaded");
-			scrambleMode = randomSort;
-		}
-		
-		if (scrambleMode == randomSort)
-		{
-			decl Random[14];
-			new iSelection;
-			for (new i; i < sizeof(Random); i++)
-			{
-				Random[i] = GetRandomInt(0,100);
-				if (6 <= i <=10 && !g_bUseGameMe)
-				{
-					Random[i] = 0;
-				}
-				if (11 <= i <= 12 && !g_bUseHlxCe)
-				{
-					Random[i] = 0;
-				}
-			}
-			for (new i; i < sizeof(Random); i++)
-			{
-				if (Random[i] > iSelection)
-				{
-					iSelection = Random[i];
-				}
-			}
-			scrambleMode = e_ScrambleModes:iSelection;
-		}
-	}
-	ScramblePlayers(scrambleMode);
-	
-	CreateTimer(1.0, Timer_ScrambleSound);
-	DelayPublicVoteTriggering(true);
-	new bool:spawn = false;
-	if (respawn || g_bPreGameScramble)
-		spawn = true;
-	CreateTimer(0.1, timer_AfterScramble, spawn, TIMER_FLAG_NO_MAPCHANGE);	
-	if (g_bPreGameScramble)
-	{
-		PrintToChatAll("\x01\x04[SM]\x01 %t", "PregameScrambled");
-		g_bPreGameScramble = false;
-	}
-	else
-		PrintToChatAll("\x01\x04[SM]\x01 %t", "Scrambled");		
-	if (g_bIsTimer && g_RoundState == setup && GetConVarBool(cvar_SetupRestore))
-		TF2_ResetSetup();
-	return Plugin_Handled;
-}
-
-public Action:Timer_ScrambleSound(Handle:timer)
-{
-	EmitSoundToAll(SCRAMBLE_SOUND, SOUND_FROM_PLAYER, SNDCHAN_AUTO, SNDLEVEL_NORMAL); // TEAMS ARE BEING SCRAMBLED!
-	return Plugin_Handled;
-}
-
-TF2_ResetSetup()
-{
-	g_iTimerEnt = FindEntityByClassname(-1, "team_round_timer");
-	new setupDuration = GetTime() - g_iRoundStartTime; 
-	SetVariantInt(setupDuration);
-	AcceptEntityInput(g_iTimerEnt, "AddTime");
-	g_iRoundStartTime = GetTime();
-}
-
-bool:AutoScrambleCheck(winningTeam)
-{
-	if (g_bFullRoundOnly && !g_bWasFullRound)
-		return false;
-	if (g_bKothMode)
-	{
-		if (!g_bRedCapped || !g_bBluCapped)
-		{
-			decl String:team[3];
-			g_bRedCapped ? (team = "BLU") : (team = "RED");
-			PrintToChatAll("\x01\x04[SM]\x01 %t", "NoCapMessage", team);
-			LogAction(0, -1, "%s did not cap a point on KOTH", team);
-			return true;
-		}
-	}
-	new totalFrags = g_aTeams[iRedFrags] + g_aTeams[iBluFrags],
-		losingTeam = winningTeam == TEAM_RED ? TEAM_BLUE : TEAM_RED,
-		dominationDiffVar = GetConVarInt(cvar_DominationDiff);
-	if (dominationDiffVar && totalFrags > 20)
-	{
-		new winningDoms = TF2_GetTeamDominations(winningTeam),
-			losingDoms = TF2_GetTeamDominations(losingTeam);
-		if (winningDoms > losingDoms)
-		{
-			new teamDominationDiff = RoundFloat(FloatAbs(float(winningDoms) - float(losingDoms)));
-			if (teamDominationDiff >= dominationDiffVar)
-			{
-				LogAction(0, -1, "domination difference detected");
-				PrintToChatAll("\x01\x04[SM]\x01 %t", "DominationMessage");
-				return true;
-			}	
-		}
-	}
-	new Float:iDiffVar = GetConVarFloat(cvar_AvgDiff);
-	if (totalFrags > 20 && iDiffVar > 0.0 && GetAvgScoreDifference(winningTeam) >= iDiffVar)
-	{
-		LogAction(0, -1, "Average score diff detected");
-		PrintToChatAll("\x01\x04[SM]\x01 %t", "RatioMessage");
-		return true;
-	}
-	new winningFrags = winningTeam == TEAM_RED ? g_aTeams[iRedFrags] : g_aTeams[iBluFrags],
-		losingFrags	= winningTeam == TEAM_RED ? g_aTeams[iBluFrags] : g_aTeams[iRedFrags],
-		Float:ratio = float(winningFrags) / float(losingFrags),
-		iSteamRollVar = GetConVarInt(cvar_Steamroll),
-		roundTime = GetTime() - g_iRoundStartTime;
-	if (iSteamRollVar && winningFrags > losingFrags && iSteamRollVar >= roundTime && ratio >= GetConVarFloat(cvar_SteamrollRatio))
-	{
-		new minutes = iSteamRollVar / 60;
-		new seconds = iSteamRollVar % 60;
-		PrintToChatAll("\x01\x04[SM]\x01 %t", "WinTime", minutes, seconds);
-		LogAction(0, -1, "steam roll detected");
-		return true;		
-	}
-	new Float:iFragRatioVar = GetConVarFloat(cvar_FragRatio);
-	if (totalFrags > 20 && winningFrags > losingFrags && iFragRatioVar > 0.0)	
-	{		
-		if (ratio >= iFragRatioVar)
-		{
-			PrintToChatAll("\x01\x04[SM]\x01 %t", "FragDetection");
-			LogAction(0, -1, "Frag ratio detected");
-			return true;			
-		}
-	}
-	return false;
-}
-
-public Action:timer_AfterScramble(Handle:timer, any:spawn)
-{
-	
-	new iEnt = -1;
-	while ((iEnt = FindEntityByClassname(iEnt, "tf_ammo_pack")) != -1)
-		AcceptEntityInput(iEnt, "Kill");
-	TF2_RemoveRagdolls();
-	
-	if (spawn)
-	{
-		for (new i = 1; i <= MaxClients; i++)
-		{
-			if (IsClientInGame(i) && IsValidTeam(i))
-			{
-				if (!IsPlayerAlive(i))
-				{
-					TF2_RespawnPlayer(i);
-				}
-				if (TF2_GetPlayerClass(i) == TFClass_Unknown)
-				{
-					TF2_SetPlayerClass(i, TFClass_Scout);
-				}
-			}
-		}
-	}
-		
-	if (g_RoundState == setup && GetConVarBool(cvar_SetupCharge))	
-	{
-		LogAction(0, -1, "Filling up medic cannons due to setting");
-		for (new i= 1; i<=MaxClients; i++)
-		{
-			if (IsClientInGame(i) && IsValidTeam(i))
-			{
-				new TFClassType:class = TF2_GetPlayerClass(i);
-				if (class == TFClass_Medic)
-				{
-					new index = GetPlayerWeaponSlot(i, 1);
-					if (index)
-					{
-						decl String:sClass[33];
-						GetEntityNetClass(index, sClass, sizeof(sClass));
-						if (StrEqual(sClass, "CWeaponMedigun", true))
-						{
-							SetEntPropFloat(index, Prop_Send, "m_flChargeLevel", 1.0);	
-						}
-					}
-				}		
-			}
-		}
-	}
-	return Plugin_Handled;
-}
 
 SetupTeamSwapBlock(client)  /* blocks proper clients from spectating*/
 {
@@ -3362,33 +2330,6 @@ SetupTeamSwapBlock(client)  /* blocks proper clients from spectating*/
 		}
 	}
 	g_aPlayers[client][iBlockTime] = GetTime() + g_iForceTime;
-}
-
-stock StartScrambleDelay(Float:delay = 5.0, bool:respawn = false, e_ScrambleModes:mode = random)
-{
-	if (g_hScrambleDelay != INVALID_HANDLE)
-	{
-		KillTimer(g_hScrambleDelay);
-		g_hScrambleDelay = INVALID_HANDLE;
-	}
-	if (mode == invalid)
-		mode = e_ScrambleModes:GetConVarInt(cvar_SortMode);
-	
-	new Handle:data;
-	g_hScrambleDelay = CreateDataTimer(delay, timer_ScrambleDelay, data, TIMER_FLAG_NO_MAPCHANGE|TIMER_DATA_HNDL_CLOSE );
-	WritePackCell(data, respawn);
-	WritePackCell(data, _:mode);
-	if (delay == 0.0)
-		delay = 1.0;	
-	if (delay >= 2.0)
-	{
-		PrintToChatAll("\x01\x04[SM]\x01 %t", "ScrambleDelay", RoundFloat(delay));
-		if (g_RoundState != bonusRound)
-		{	
-			EmitSoundToAll(EVEN_SOUND, SOUND_FROM_PLAYER, SNDCHAN_AUTO, SNDLEVEL_NORMAL);
-			CreateTimer(1.7, TimerStopSound);
-		}
-	}
 }
 
 public Action:TimerStopSound(Handle:timer)	 // cuts off the sound after 1.7 secs so it only plays 'Lets even this out'
@@ -3442,42 +2383,6 @@ public TimerUpdateAdd(Handle:event, const String:name[], bool:dontBroadcast)
 		g_iRoundTimer += GetEventInt(event, "seconds_added");
 		CheckBalance(true);
 	}
-}
-
-stock bool:IsOkToBalance()
-{
-	if (g_RoundState == normal)
-	{
-		new iBalanceTimeLimit = GetConVarInt(cvar_BalanceTimeLimit);
-		if (iBalanceTimeLimit && g_iRoundTimer)
-		{
-			if (g_iRoundTimer < iBalanceTimeLimit)
-			{
-				return false;
-			}
-		}
-		return true;
-	}
-	switch (g_RoundState)
-	{
-		case suddenDeath:
-		{
-			return false;
-		}
-		case preGame:
-		{
-			return false;
-		}
-		case setup:
-		{
-			return false;
-		}
-		case bonusRound:
-		{
-			return false;
-		}
-	}
-	return true;
 }
 
 public Action:Timer_Countdown(Handle:timer)
@@ -3543,51 +2448,6 @@ stock GetPlayerPriority(client)
 	return iPriority;
 }
 
-stock bool:TF2_IsClientUberCharged(client)
-{
-	if (!IsPlayerAlive(client))
-		return false;
-	new TFClassType:class = TF2_GetPlayerClass(client);
-	if (class == TFClass_Medic)
-	{			
-		new iIdx = GetPlayerWeaponSlot(client, 1);
-		if (iIdx > 0)
-		{
-			decl String:sClass[33];
-			GetEntityNetClass(iIdx, sClass, sizeof(sClass));
-			if (StrEqual(sClass, "CWeaponMedigun", true))
-			{
-				new Float:chargeLevel = GetEntPropFloat(iIdx, Prop_Send, "m_flChargeLevel");
-				if (chargeLevel >= 0.55)	
-				{
-					return true;
-				}
-			}
-		}
-	}
-	return false;
-}
-
-stock bool:TF2_IsClientUbered(client)
-{
-	new bits = TF2_GetPlayerConditionFlags(client);
-	
-	if (bits & TF_CONDFLAG_UBERCHARGED || bits & TF_CONDFLAG_KRITZKRIEGED || bits & TF_CONDFLAG_UBERCHARGEFADE)
-		return true;
-	return false;
-}
-
-stock bool:TF2_ClientBuilding(client, const String:building[])
-{
-	new iEnt = -1;
-	while ((iEnt = FindEntityByClassname(iEnt, building)) != -1)
-	{
-		if (GetEntDataEnt2(iEnt, FindSendPropInfo("CBaseObject", "m_hBuilder")) == client)
-			return true;
-	}
-	return false;
-}
-
 bool:IsValidTeam(client)
 {
 	new team = GetClientTeam(client);
@@ -3624,304 +2484,6 @@ public OnLibraryAdded(const String:name[])
 	}
 }
 
-public OnAdminMenuReady(Handle:topmenu)
-{
-	if (topmenu == g_hAdminMenu)
-		return;
-	g_hAdminMenu = topmenu;
-	new TopMenuObject:menu_category = FindTopMenuCategory(topmenu, ADMINMENU_SERVERCOMMANDS);
-	
-	if (menu_category != INVALID_TOPMENUOBJECT)
-	{
-		AddToTopMenu(g_hAdminMenu, "gScramble", TopMenuObject_Item, Handle_Category, menu_category);
-	}
-}
-
-public Handle_Category(Handle:topmenu, TopMenuAction:action, TopMenuObject:object_id, param, String:buffer[], maxlength)
-{
-	switch (action)
-	{
-		case TopMenuAction_DisplayOption:
-			Format(buffer, maxlength, "gScramble Commands");
-		case TopMenuAction_SelectOption:
-		{
-			Format(buffer, maxlength, "Select a Function");
-			decl String:sBuffer[33];
-			new Handle:hScrambleOptionsMenu = CreateMenu(Handle_ScrambleFunctionMenu);
-			SetMenuTitle(hScrambleOptionsMenu, "Choose A Function");
-			SetMenuExitButton(hScrambleOptionsMenu, true);
-			SetMenuExitBackButton(hScrambleOptionsMenu, true);
-			if (CheckCommandAccess(param, "sm_scrambleround", ADMFLAG_BAN))
-			{
-				AddMenuItem(hScrambleOptionsMenu, "0", "Start a Scramble");
-			}
-			if (CheckCommandAccess(param, "sm_scramblevote", ADMFLAG_BAN))
-			{
-				AddMenuItem(hScrambleOptionsMenu, "1", "Start a Vote");
-				Format(sBuffer, sizeof(sBuffer), "Reset %i Vote(s)", g_iVotes);
-				AddMenuItem(hScrambleOptionsMenu, "2", sBuffer);
-			}
-			if (CheckCommandAccess(param, "sm_forcebalance", ADMFLAG_BAN))
-			{
-				AddMenuItem(hScrambleOptionsMenu, "3", "Force Team Balance");
-			}
-			if (CheckCommandAccess(param, "sm_cancel", ADMFLAG_BAN))
-			{
-				if (g_bScrambleNextRound || g_hScrambleDelay != INVALID_HANDLE)
-				{
-					Format( sBuffer, sizeof(sBuffer), "Cancel (Pending Scramble)");
-					AddMenuItem(hScrambleOptionsMenu, "4", sBuffer);
-				}					
-				else if (g_bAutoScramble && g_RoundState == bonusRound)
-				{
-					Format( sBuffer, sizeof(sBuffer), "Cancel (Auto-Scramble Check)");
-					AddMenuItem(hScrambleOptionsMenu, "4", sBuffer);
-				}
-			}
-			DisplayMenu(hScrambleOptionsMenu, param, MENU_TIME_FOREVER);
-		}
-	}
-}
-
-/*******************************************
-			tedious menu stuff
-********************************************/
-
-ShowScrambleVoteMenu(client)
-{
-	new Handle:scrambleVoteMenu = INVALID_HANDLE;
-	scrambleVoteMenu = CreateMenu(Handle_ScrambleVote);
-	
-	SetMenuTitle(scrambleVoteMenu, "Choose a Method");
-	SetMenuExitButton(scrambleVoteMenu, true);
-	SetMenuExitBackButton(scrambleVoteMenu, true);
-	AddMenuItem(scrambleVoteMenu, "round", "Vote for End-of-Round Scramble");
-	AddMenuItem(scrambleVoteMenu, "now", "Vote for Scramble Now");
-	DisplayMenu(scrambleVoteMenu, client, MENU_TIME_FOREVER);
-}
-
-ShowScrambleSelectionMenu(client)
-{
-	new Handle:scrambleMenu = INVALID_HANDLE;
-	scrambleMenu = CreateMenu(Handle_Scramble);
-	
-	SetMenuTitle(scrambleMenu, "Choose a Method");
-	SetMenuExitButton(scrambleMenu, true);
-	SetMenuExitBackButton(scrambleMenu, true);
-	AddMenuItem(scrambleMenu, "round", "Scramble Next Round");
-	if (CheckCommandAccess(client, "sm_scramble", ADMFLAG_BAN))
-		AddMenuItem(scrambleMenu, "now", "Scramble Teams Now");
-	DisplayMenu(scrambleMenu, client, MENU_TIME_FOREVER);
-}
-
-public Handle_ScrambleFunctionMenu(Handle:functionMenu, MenuAction:action, client, param2)
-{
-	switch (action)
-	{
-		case MenuAction_Select:
-		{
-			decl String:sOption[2];
-			GetMenuItem(functionMenu, param2, sOption, sizeof(sOption));
-			switch (StringToInt(sOption))
-			{
-				case 0:
-					ShowScrambleSelectionMenu(client);
-				case 1:
-					ShowScrambleVoteMenu(client);
-				case 2:
-					PerformReset(client);
-				case 3:
-					PerformBalance(client);
-				case 4: 
-					PerformCancel(client);
-			}
-		}
-		case MenuAction_Cancel:
-		{
-			if (param2 == MenuCancel_ExitBack )
-				RedisplayAdminMenu(g_hAdminMenu, client);
-		}		
-		case MenuAction_End:
-			CloseHandle(functionMenu);
-	}
-}
-
-public Handle_ScrambleVote(Handle:scrambleVoteMenu, MenuAction:action, client, param2)
-{
-	switch (action)
-	{
-		case MenuAction_Select:
-		{
-			new String:method[6], ScrambleTime:iMethod;
-			GetMenuItem(scrambleVoteMenu, param2, method, sizeof(method));
-			if (StrEqual(method, "round", true))
-				iMethod = Scramble_Round;			
-			else
-				iMethod = Scramble_Now;
-			PerformVote(client, iMethod);			
-		}
-		
-		case MenuAction_Cancel:
-		{
-			if (param2 == MenuCancel_ExitBack )
-				RedisplayAdminMenu(g_hAdminMenu, client);
-		}
-		
-		case MenuAction_End:
-			CloseHandle(scrambleVoteMenu);	
-	}
-}
-
-public Handle_Scramble(Handle:scrambleMenu, MenuAction:action, client, param2 )
-{
-	switch (action)
-	{
-		case MenuAction_Select:
-		{
-			if (!param2)
-				SetupRoundScramble(client);
-			else
-			{
-				new Handle:scrambleNowMenu = INVALID_HANDLE;
-				scrambleNowMenu = CreateMenu(Handle_ScrambleNow);
-				
-				SetMenuTitle(scrambleNowMenu, "Choose a Method");
-				SetMenuExitButton(scrambleNowMenu, true);
-				SetMenuExitBackButton(scrambleNowMenu, true);
-				AddMenuItem(scrambleNowMenu, "5", "Delay 5 seconds");
-				AddMenuItem(scrambleNowMenu, "15", "Delay 15 seconds");
-				AddMenuItem(scrambleNowMenu, "30", "Delay 30 seconds");
-				AddMenuItem(scrambleNowMenu, "60", "Delay 60 seconds");
-				DisplayMenu(scrambleNowMenu, client, MENU_TIME_FOREVER);
-			}
-		}
-		
-		case MenuAction_Cancel:
-		{
-			if (param2 == MenuCancel_ExitBack )
-				RedisplayAdminMenu(g_hAdminMenu, client);
-		}
-		
-		case MenuAction_End:
-			CloseHandle(scrambleMenu);	
-	}
-}
-
-public Handle_ScrambleNow(Handle:scrambleNowMenu, MenuAction:action, client, param2)
-{
-	switch (action)
-	{
-		case MenuAction_Select:
-		{
-			new Handle:respawnSelectMenu = INVALID_HANDLE;
-			respawnSelectMenu = CreateMenu(Handle_RespawnMenu);
-		
-			if (g_hScrambleNowPack != INVALID_HANDLE)
-				CloseHandle(g_hScrambleNowPack);
-			g_hScrambleNowPack= CreateDataPack();
-		
-			SetMenuTitle(respawnSelectMenu, "Respawn Players After Scramble?");
-			SetMenuExitButton(respawnSelectMenu, true);
-			SetMenuExitBackButton(respawnSelectMenu, true);
-		
-			AddMenuItem(respawnSelectMenu, "Yep", "Yes");
-			AddMenuItem(respawnSelectMenu, "Noep", "No");
-			DisplayMenu(respawnSelectMenu, client, MENU_TIME_FOREVER);
-			new String:delay[3];
-			GetMenuItem(scrambleNowMenu, param2, delay, sizeof(delay));		
-			WritePackFloat(g_hScrambleNowPack, StringToFloat(delay));
-		}
-		
-		case MenuAction_Cancel:
-		{
-			if (param2 == MenuCancel_ExitBack )
-				RedisplayAdminMenu( g_hAdminMenu, client );
-		}
-	
-		case MenuAction_End:
-			CloseHandle(scrambleNowMenu);
-	}
-}
-
-public Handle_RespawnMenu(Handle:scrambleResetMenu, MenuAction:action, client, param2)
-{
-	switch (action)
-	{
-		case MenuAction_Select:
-		{
-			new respawn = !param2 ? 1 : 0 ;
-			WritePackCell(g_hScrambleNowPack, respawn);
-			
-			new Handle:modeSelectMenu = INVALID_HANDLE;
-			modeSelectMenu = CreateMenu(Handle_ModeMenu);
-			
-			SetMenuTitle(modeSelectMenu, "Select a scramble sort mode");
-			SetMenuExitButton(modeSelectMenu, true);
-			SetMenuExitBackButton(modeSelectMenu, true);
-			
-			AddMenuItem(modeSelectMenu, "1", "Random");
-			AddMenuItem(modeSelectMenu, "2", "Player-Score");
-			AddMenuItem(modeSelectMenu, "3", "Player-Score^2/Connect time (in minutes)");
-			AddMenuItem(modeSelectMenu, "4", "Player kill-Death ratios");
-			AddMenuItem(modeSelectMenu, "5", "Swap the top players on each team");
-			
-			if (g_bUseGameMe)
-			{
-				AddMenuItem(modeSelectMenu, "6", "Use GameME Rank");
-				AddMenuItem(modeSelectMenu, "7", "Use GameME Skill");
-				AddMenuItem(modeSelectMenu, "8", "Use GameME Global Rank");
-				AddMenuItem(modeSelectMenu, "9", "Use GameME Global Skill");
-				AddMenuItem(modeSelectMenu, "10", "Use GameME Session Skill Change");
-			}
-			if (g_bUseHlxCe)
-			{
-				AddMenuItem(modeSelectMenu, "11", "Use HlxCe Rank");
-				AddMenuItem(modeSelectMenu, "12", "Use HlxCe Skill");
-			}
-			AddMenuItem(modeSelectMenu, "13", "Sort By Player Classes");
-			AddMenuItem(modeSelectMenu, "14", "Random Sort-Mode");
-			DisplayMenu(modeSelectMenu, client, MENU_TIME_FOREVER);
-		}
-		
-		case MenuAction_Cancel:
-		{
-			if (param2 == MenuCancel_ExitBack)
-				RedisplayAdminMenu( g_hAdminMenu, client);
-		}
-		
-		case MenuAction_End:
-			CloseHandle(scrambleResetMenu);
-			
-	}
-}
-
-public Handle_ModeMenu(Handle:modeMenu, MenuAction:action, client, param2)
-{
-	switch(action)
-	{
-		case MenuAction_Select:
-		{
-			ResetPack(g_hScrambleNowPack);
-			new e_ScrambleModes:mode,
-				Float:delay = ReadPackFloat(g_hScrambleNowPack),
-				bool:respawn = ReadPackCell(g_hScrambleNowPack) ? true : false;
-			mode = e_ScrambleModes:(param2+1);
-			CloseHandle(g_hScrambleNowPack);
-			g_hScrambleNowPack = INVALID_HANDLE;
-			PerformScrambleNow(client, delay, respawn, mode);		
-		}
-		
-		case MenuAction_Cancel:
-		{
-			if (param2 == MenuCancel_ExitBack)
-				RedisplayAdminMenu( g_hAdminMenu, client);
-		}
-		
-		case MenuAction_End:
-			CloseHandle(modeMenu);
-	}
-}
-
 public SortScoreDesc(x[], y[], array[][], Handle:data)
 {
     if (Float:x[1] > Float:y[1])
@@ -3938,175 +2500,6 @@ public SortScoreAsc(x[], y[], array[][], Handle:data)
 	else if (Float:x[1] < Float:y[1])
 		return -1;
     return 0;
-}
-
-
-stock TF2_GetPlayerDominations(client)
-{
-	new offset = FindSendPropInfo("CTFPlayerResource", "m_iActiveDominations"),
-		ent = FindEntityByClassname(-1, "tf_player_manager");
-	if (ent != -1)
-		return GetEntData(ent, (offset + client*4), 4);
-	return 0;
-}
-
-stock TF2_GetTeamDominations(team)
-{
-	new dominations;
-	for (new i = 1; i <= MaxClients; i++)
-	{
-		if (IsClientInGame(i) && GetClientTeam(i) == team)
-			dominations += TF2_GetPlayerDominations(i);
-	}
-	return dominations;
-}
-
-stock bool:TF2_IsClientOnlyMedic(client)
-{
-	if (TFClassType:TF2_GetPlayerClass(client) != TFClass_Medic)
-		return false;
-	new clientTeam = GetClientTeam(client);
-	for (new i = 1; i <= MaxClients; i++)
-	{
-		if (i != client && IsClientInGame(i) && GetClientTeam(i) == clientTeam && TFClassType:TF2_GetPlayerClass(i) == TFClass_Medic)
-			return false;
-	}
-	return true;
-}
-
-public Action:UserMessageHook_Class(UserMsg:msg_id, Handle:bf, const players[], playersNum, bool:reliable, bool:init) 
-{	
-	new String:strMessage[50];
-	BfReadString(bf, strMessage, sizeof(strMessage), true);
-	if (StrContains(strMessage, "#TF_TeamsSwitched", true) != -1)
-	{
-		SwapPreferences();
-		new oldRed = g_aTeams[iRedWins], oldBlu = g_aTeams[iBluWins];
-		g_aTeams[iRedWins] = oldBlu;
-		g_aTeams[iBluWins] = oldRed;
-		g_iTeamIds[0] == TEAM_RED ? (g_iTeamIds[0] = TEAM_BLUE) :  (g_iTeamIds[0] = TEAM_RED);
-		g_iTeamIds[1] == TEAM_RED ? (g_iTeamIds[1] = TEAM_BLUE) :  (g_iTeamIds[1] = TEAM_RED);
-	}
-	return Plugin_Continue;
-}
-
-stock TF2_RemoveRagdolls()
-{
-	new iEnt = -1;
-	while ((iEnt = FindEntityByClassname(iEnt, "tf_ragdoll")) != -1)
-		AcceptEntityInput(iEnt, "Kill");
-}
-
-	/**
-	find anyone who was recently teamswapped as a result of our reconnecting person
-	and ask if they want to get put back on their old team
-	*/
-	
-RestoreMenuCheck(rejoinClient, team)
-{
-/**
-find out who was the last one swapped
-*/
-	new client, iTemp;
-	for (new i = 1; i<= MaxClients; i++)
-	{
-		if (IsClientInGame(i) && GetClientTeam(i) == team)
-		{
-			if (g_aPlayers[i][iBalanceTime] > GetTime() && g_aPlayers[i][iBalanceTime] > iTemp)
-			{
-				client = i;
-				iTemp = g_aPlayers[i][iBalanceTime];
-			}
-		}
-	}
-	if (!client)
-		return;
-	decl String:name[MAX_NAME_LENGTH+1];
-	GetClientName(rejoinClient, name, sizeof(name));
-	
-	PrintToChat(client, "\x01\x04[SM]\x01 %t", "RestoreInnocentTeam", name);
-	
-	new Handle:RestoreMenu = INVALID_HANDLE;
-	RestoreMenu = CreateMenu(Handle_RestoreMenu);
-	
-	SetMenuTitle(RestoreMenu, "Retore your old team?");
-	AddMenuItem(RestoreMenu, "yes", "Yes");
-	AddMenuItem(RestoreMenu, "no", "No");
-	DisplayMenu(RestoreMenu, client, 20);
-}
-
-AddBuddy(client, buddy)
-{
-	if (!client || !buddy || !IsClientInGame(client) || !IsClientInGame(buddy) || client == buddy)
-		return;
-	if (g_aPlayers[buddy][iBuddy])
-	{
-		PrintToChat(client, "\x01\x04[SM]\x01 %t", "AlreadyHasABuddy");
-		return;
-	}
-	new String:clientName[MAX_NAME_LENGTH],
-		String:buddyName[MAX_NAME_LENGTH];
-	GetClientName(client, clientName, sizeof(clientName));
-	GetClientName(buddy, buddyName, sizeof(buddyName));
-	
-	if (g_aPlayers[client][iBuddy])
-		PrintToChat(g_aPlayers[client][iBuddy], "\x01\x04[SM]\x01 %t", "ChoseANewBuddy", clientName);
-	
-	g_aPlayers[client][iBuddy] = buddy;
-	PrintToChat(buddy, "\x01\x04[SM]\x01 %t", "SomeoneAddedYou", clientName);
-	PrintToChat(client, "\x01\x04[SM]\x01 %t", "AddedBuddy", buddyName);
-}
-
-ShowBuddyMenu(client)
-{
-	new Handle:menu = INVALID_HANDLE;
-	menu = CreateMenu(BuddyMenuCallback);
-	AddTargetsToMenu(menu,0);
-	DisplayMenu(menu, client, MENU_TIME_FOREVER);
-}
-
-public BuddyMenuCallback(Handle:menu, MenuAction:action, client, param2)
-{
-	switch(action)
-	{
-		case MenuAction_Select:
-		{
-			new String:selection[10];
-			GetMenuItem(menu, param2, selection, sizeof(selection));
-			AddBuddy(client, GetClientOfUserId(StringToInt(selection)));			
-		}
-		
-		case MenuAction_End:
-			CloseHandle(menu);
-	}
-}
-
-/**
- ask a client if they want to rejoin their old team when they get balanced due to a disconnecting player
- and that player reconnects and gets forced back to his old team
-*/
-public Handle_RestoreMenu(Handle:RestoreMenu, MenuAction:action, client, param2)
-{
-	switch (action)
-	{
-		case MenuAction_Select:
-		{
-			if (!param2)
-			{
-				decl String:name[MAX_NAME_LENGTH+1];
-				GetClientName(client, name, sizeof(name));
-				PrintToChatAll("\x01\x04[SM]\x01 %t", "RejoinMessage", name);
-				g_bBlockDeath = true;
-				CreateTimer(0.1, Timer_BalanceSpawn, GetClientUserId(client));
-				ChangeClientTeam(client, GetClientTeam(client) == TEAM_RED ? TEAM_BLUE : TEAM_RED);
-				g_bBlockDeath = false;
-				g_aPlayers[client][iBalanceTime] = GetTime();
-			}
-		}
-	
-		case MenuAction_End:
-			CloseHandle(RestoreMenu);
-	}
 }
 
 bool:CheckSpecChange(client)
@@ -4156,9 +2549,4 @@ public SortIntsDesc(x[], y[], array[][], Handle:data)		// this sorts everything 
     else if (x[1] < y[1]) 
 		return 1;    
     return 0;
-}
-
-stock GetSmallerTeam()
-{
-	return GetLargerTeam() == TEAM_RED ? TEAM_BLUE:TEAM_RED;
 }

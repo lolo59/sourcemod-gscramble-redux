@@ -39,7 +39,10 @@ $Copyright: (c) Tf2Tmng 2009-2011$
 
 #include <sourcemod>
 #include <sdktools>
+#include <tf2_stocks>
 #pragma semicolon 1
+new Handle:g_hCvar_SoundSetting = INVALID_HANDLE;
+new Handle:g_hCvar_SpySetting 	= INVALID_HANDLE;
 
 public Plugin:myinfo = 
 {
@@ -53,6 +56,8 @@ public Plugin:myinfo =
 public OnPluginStart()
 {
 	HookEvent("player_death", Event_Player_Death, EventHookMode_Post);
+	g_hCvar_SoundSetting = CreateConVar("sm_bonksound_play", "2", "Play the bonk sound, 0 disables, 1 emits sound from the killer, 2 plays sound for everyone full volume", FCVAR_PLUGIN, true, 0.0, true, 2.0);
+	g_hCvar_SpySetting = CreateConVar("sm_bonksound_ignore_spy", "0", "Ignore spies or not", FCVAR_PLUGIN, true, 0.0, true, 1.0);
 }
 
 public Event_Player_Death(Handle:event, const String:name[], bool:dontBroadcast)
@@ -61,23 +66,42 @@ public Event_Player_Death(Handle:event, const String:name[], bool:dontBroadcast)
 	{
 		return;
 	}
-	
+	new iSetting = GetConVarInt(g_hCvar_SoundSetting);
 	new iKiller = GetClientOfUserId(GetEventInt(event, "attacker"));
 	if (iKiller && iKiller <= MaxClients)
 	{
 		if (GetEventInt(event, "damagebits")& DMG_CLUB)
 		{
-			new Float:fPos[3];
-			GetClientAbsOrigin(iKiller, fPos);
-			EmitSoundToAll(BONK,
-				 iKiller,
-				 SNDCHAN_AUTO,
-				 SNDLEVEL_NORMAL,
-				 SND_NOFLAGS,
-				 SNDVOL_NORMAL,
-				 SNDPITCH_NORMAL,
-				-1,
-				 fPos);
+			if (iSetting && !IsFakeClient(iKiller) && GetConVarInt(g_hCvar_SpySetting) && TF2_GetPlayerClass(iKiller) == TFClass_Spy)
+			{
+				EmitSoundToClient(iKiller, BONK);
+				return;
+			}
+			switch (iSetting)
+			{
+				case 0:
+				{
+					return;
+				}
+				case 1:
+				{
+					new Float:fPos[3];
+					GetClientAbsOrigin(iKiller, fPos);
+					EmitSoundToAll(BONK,
+						 iKiller,
+						 SNDCHAN_AUTO,
+						 SNDLEVEL_NORMAL,
+						 SND_NOFLAGS,
+						 SNDVOL_NORMAL,
+						 SNDPITCH_NORMAL,
+						-1,
+						 fPos);
+				}
+				case 2:
+				{
+					EmitSoundToAll(BONK);
+				}
+			}
 		}
 	}
 }
