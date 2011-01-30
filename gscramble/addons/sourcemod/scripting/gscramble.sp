@@ -151,7 +151,8 @@ new Handle:g_hVoteDelayTimer 		= INVALID_HANDLE,
 	
 new Handle:g_cookie_timeBlocked 	= INVALID_HANDLE,
 	Handle:g_cookie_teamIndex		= INVALID_HANDLE,
-	Handle:g_cookie_serverIp		= INVALID_HANDLE;
+	Handle:g_cookie_serverIp		= INVALID_HANDLE,
+	Handle:g_cookie_serverStartTime = INVALID_HANDLE;
 
 new String:g_sVoteCommands[3][65];
 
@@ -191,7 +192,8 @@ new bool:g_bScrambleNextRound = false,
 
 new g_iTeamIds[2] = {TEAM_RED, TEAM_BLUE};
 
-new	g_iMapStartTime,
+new	g_iPluginStartTime,
+	g_iMapStartTime,
 	g_iRoundStartTime,
 	g_iSpawnTime,
 	g_iVotes,
@@ -415,6 +417,7 @@ public OnPluginStart()
 	g_iVoters = GetClientCount(false);
 	g_iVotesNeeded = RoundToFloor(float(g_iVoters) * GetConVarFloat(cvar_PublicNeeded));
 	g_bVoteCommandCreated = false;
+	g_iPluginStartTime = GetTime();
 
 }
 
@@ -575,6 +578,7 @@ CheckEstensions()
 		g_cookie_timeBlocked = RegClientCookie("time blocked", "time player was blocked", CookieAccess_Private);
 		g_cookie_serverIp	= RegClientCookie("server_id", "ip of the server", CookieAccess_Private);
 		g_cookie_teamIndex = RegClientCookie("team index", "index of the player's team", CookieAccess_Private);
+		g_cookie_serverStartTime = RegClientCookie("start time", "time the plugin was loaded", CookieAccess_Private);
 	}
 }
 
@@ -1292,17 +1296,19 @@ public Action:Event_PlayerDisconnect(Handle:event, const String:name[], bool:don
 		*/
 		if (g_bUseClientPrefs && g_bForceTeam && g_bForceReconnect && IsClientInGame(client) && IsValidTeam(client) && (g_bTeamsLocked || IsBlocked(client)))
 		{
-			decl String:blockTime[128], String:teamIndex[5], iIndex, String:serverIp[50], String:serverPort[10];
+			decl String:blockTime[128], String:teamIndex[5], iIndex, String:serverIp[50], String:serverPort[10], String:startTime[33];
 			GetConVarString(FindConVar("hostip"), serverIp, sizeof(serverIp));
 			GetConVarString(FindConVar("hostport"), serverPort, sizeof(serverPort));
 			Format(serverIp, sizeof(serverIp), "%s%s", serverIp, serverPort);
 			IntToString(GetTime(), blockTime, sizeof(blockTime));
+			IntToString(g_iPluginStartTime, startTime, sizeof(startTime));
 			if (g_iTeamIds[1] == GetClientTeam(client))
 				iIndex = 1;
 			IntToString(iIndex, teamIndex, sizeof(teamIndex));
 			SetClientCookie(client, g_cookie_timeBlocked, blockTime);
 			SetClientCookie(client, g_cookie_teamIndex, teamIndex);
 			SetClientCookie(client, g_cookie_serverIp, serverIp);
+			SetClientCookie(client, g_cookie_serverStartTime, startTime);
 			LogAction(client, -1, "\"%L\" is team swap blocked, and is being saved.", client);
 		}
 		if (g_bUseBuddySystem)
@@ -1368,6 +1374,15 @@ public OnClientCookiesCached(client)
 		return;
 	
 	g_aPlayers[client][iBlockWarnings] = 0;
+	decl String:sStartTime[33];
+	GetClientCookie(client, g_cookie_serverStartTime, sStartTime, sizeof(sStartTime));
+	if (StringToInt(sStartTime) != g_iPluginStartTime)
+	{
+		return;
+		/**
+		bug out since the sessions dont match
+		*/
+	}
 	decl String:time[32], iTime, String:clientServerIp[33], String:serverIp[100], String:serverPort[100];
 	GetConVarString(FindConVar("hostip"), serverIp, sizeof(serverIp));
 	GetConVarString(FindConVar("hostport"), serverPort, sizeof(serverPort));
