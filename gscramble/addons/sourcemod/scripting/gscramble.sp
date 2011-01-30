@@ -57,7 +57,7 @@ delete these 2 lines if you want to compile without those thingies.
 #endif
 #define REQUIRE_PLUGIN
 
-#define VERSION "3.0.3"
+#define VERSION "3.0.25"
 #define TEAM_RED 2
 #define TEAM_BLUE 3
 #define SCRAMBLE_SOUND "vo/announcer_am_teamscramble03.wav"
@@ -2118,7 +2118,6 @@ public Action:Event_PlayerDeath_Pre(Handle:event, const String:name[], bool:dont
 	if (k_client && IsClientInGame(k_client) && k_client != v_client && g_bBlockDeath)
 	{
 		g_bBlockDeath = false;
-		LogError("Death block error detected, alert the plugin's author.");
 	}
 	if (g_bBlockDeath) 
 		return Plugin_Handled;

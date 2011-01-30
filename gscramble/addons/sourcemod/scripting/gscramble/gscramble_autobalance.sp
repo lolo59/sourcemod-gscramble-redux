@@ -56,7 +56,7 @@ public Action:timer_StartBalanceCheck(Handle:timer, any:client)
 
 bool:BalancePlayer(client)
 {
-	if (!TeamsUnbalanced())
+	if (!TeamsUnbalanced(false))
 	{
 		return true;
 	}
@@ -222,7 +222,7 @@ stock bool:TeamsUnbalanced(bool:force=true)
 	
 	if (iDiff >= iBalanceLimit)
 	{
-		if (force && iForceLimit > 1 && iDiff >= iForceLimit)
+		if (g_RoundState == normal && force && iForceLimit > 1 && iDiff >= iForceLimit)
 		{
 			BalanceTeams(true);
 
