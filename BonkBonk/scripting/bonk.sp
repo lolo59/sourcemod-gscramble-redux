@@ -33,7 +33,7 @@ $Copyright: (c) Tf2Tmng 2009-2011$
 *************************************************************************
 */
 
-#define PL_VERSION "1.0"
+#define PL_VERSION "1.1"
 #define BONK "vo/scout_specialcompleted03.wav"
 #define DMG_CLUB (1<<7)
 
@@ -58,6 +58,8 @@ public OnPluginStart()
 	HookEvent("player_death", Event_Player_Death, EventHookMode_Post);
 	g_hCvar_SoundSetting = CreateConVar("sm_bonksound_play", "2", "Play the bonk sound, 0 disables, 1 emits sound from the killer, 2 plays sound for everyone full volume", FCVAR_PLUGIN, true, 0.0, true, 2.0);
 	g_hCvar_SpySetting = CreateConVar("sm_bonksound_ignore_spy", "0", "Ignore spies or not", FCVAR_PLUGIN, true, 0.0, true, 1.0);
+	
+	AutoExecConfig(true, "plugin.bonk");
 }
 
 public Event_Player_Death(Handle:event, const String:name[], bool:dontBroadcast)
