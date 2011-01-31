@@ -356,7 +356,7 @@ public OnPluginStart()
 	cvar_RandomSelections = CreateConVar("gs_random_selections", "0.55", "Percentage of players to swap during a random scramble", FCVAR_PLUGIN, true, 0.1, true, 0.80);
 	cvar_TopSwaps			= CreateConVar("gs_top_swaps",		"5",		"Number of top players the top-swap scramble will switch", FCVAR_PLUGIN, true, 1.0, false);
 	
-	cvar_SetupCharge		= CreateConVar("gs_setup_recharge",		"1",		"If a scramble-now happens during setup time, fill up any medic's uber-charge.", FCVAR_PLUGIN, true, 0.0, true, 1.0);
+	cvar_SetupCharge		= CreateConVar("gs_setup_fill_ubers",		"0",		"If a scramble-now happens during setup time, fill up any medic's uber-charge.", FCVAR_PLUGIN, true, 0.0, true, 1.0);
 	cvar_ForceTeam 			= CreateConVar("gs_changeblocktime",	"120", 		"Time after being swapped by a scramble where players aren't allowed to change teams", FCVAR_PLUGIN, true, 0.0, false);
 	cvar_ForceReconnect		= CreateConVar("gs_check_reconnect",	"1",		"The plugin will check if people are reconnecting to the server to avoid being forced on a team.  Requires clientprefs", FCVAR_PLUGIN, true, 0.0, true, 1.0);
 	cvar_MenuVoteEnd		= CreateConVar("gs_menu_votebehavior",	"0",		"0 =will trigger scramble for round end.\n1 = will scramble teams after vote.", FCVAR_PLUGIN, true, 0.0, true, 1.0);

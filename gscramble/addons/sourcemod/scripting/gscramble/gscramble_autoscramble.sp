@@ -169,7 +169,10 @@ public Action:timer_AfterScramble(Handle:timer, any:spawn)
 			}
 		}
 	}
-		
+	if (GetTime() - g_iRoundStartTime <= 3)
+	{
+		return Plugin_Handled;
+	}
 	if (g_RoundState == setup && GetConVarBool(cvar_SetupCharge))	
 	{
 		LogAction(0, -1, "Filling up medic cannons due to setting");
