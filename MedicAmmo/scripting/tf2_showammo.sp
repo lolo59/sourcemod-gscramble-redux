@@ -32,7 +32,7 @@ $Copyright: (c) Tf2Tmng 2009-2011$
 *************************************************************************
 *************************************************************************
 */
-
+#define PL_VERSION "1.01"
 #pragma semicolon 1
 #include <sourcemod>
 #include <tf2>
@@ -61,8 +61,6 @@ new Handle:g_hVarChargeLevel = INVALID_HANDLE;
 new Handle:g_hCookieEnable 	= INVALID_HANDLE,
 	Handle:g_hCookiePosition 	= INVALID_HANDLE,
 	Handle:g_hCookieColor 		= INVALID_HANDLE;
-
-#define PL_VERSION "1.1"
 
 new Float:g_fTextPositions[4][2] = { 	{0.01, 0.78},
 										{0.01, 0.55},
