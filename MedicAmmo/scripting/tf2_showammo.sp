@@ -32,7 +32,7 @@ $Copyright: (c) Tf2Tmng 2009-2011$
 *************************************************************************
 *************************************************************************
 */
-#define PL_VERSION "1.01"
+#define PL_VERSION "1.02"
 #pragma semicolon 1
 #include <sourcemod>
 #include <tf2>
@@ -60,7 +60,8 @@ new Handle:g_hVarChargeLevel = INVALID_HANDLE;
 
 new Handle:g_hCookieEnable 	= INVALID_HANDLE,
 	Handle:g_hCookiePosition 	= INVALID_HANDLE,
-	Handle:g_hCookieColor 		= INVALID_HANDLE;
+	Handle:g_hCookieColor 		= INVALID_HANDLE,
+	Handle:g_hCookieCharge 	= INVALID_HANDLE;
 
 new Float:g_fTextPositions[4][2] = { 	{0.01, 0.78},
 										{0.01, 0.55},
@@ -78,7 +79,8 @@ enum e_ClientSettings
 {
 	bEnabled,
 	iPosition,
-	iColor
+	iColor,
+	iChargeLevel
 };
 
 new g_aClientSettings[MAXPLAYERS+1][e_ClientSettings];
@@ -97,7 +99,7 @@ public OnPluginStart()
 	CreateConVar("medic_ammocounts_version", PL_VERSION, _, FCVAR_PLUGIN|FCVAR_REPLICATED|FCVAR_NOTIFY|FCVAR_SPONLY|FCVAR_DONTRECORD);
 	h_HudMessage = CreateHudSynchronizer();
 	g_hVarUpdateSpeed = CreateConVar("sm_showammo_update_speed", "0.5", "Delay between updates", FCVAR_PLUGIN, true, 0.1, true, 5.0);
-	g_hVarChargeLevel = CreateConVar("sm_showammo_charge_level", "0.90", "Charge level where medics see ammo counts", FCVAR_PLUGIN, true, 0.0, true, 1.0);
+	g_hVarChargeLevel = CreateConVar("sm_showammo_charge_level", "0.90", "Default charge level where medics see ammo counts", FCVAR_PLUGIN, true, 0.0, true, 1.0);
 	
 	decl String:sExtError[256];
 	new iExtStatus = GetExtensionFileStatus("clientprefs.ext", sExtError, sizeof(sExtError));
@@ -109,6 +111,7 @@ public OnPluginStart()
 			g_hCookieEnable = RegClientCookie("tf2_showammo_enabed", "enable showing of ammo counts to medics", CookieAccess_Public);
 			g_hCookiePosition = RegClientCookie("tf2_showammo_position", "client position of the text", CookieAccess_Public);
 			g_hCookieColor		= RegClientCookie("tf2_showammo_color", "client text color setting", CookieAccess_Public);
+			g_hCookieCharge	= RegClientCookie("tf2_showammo_chargelevel", "Client charge level setting", CookieAccess_Public);
 			SetCookieMenuItem(AmmoCookieSettings, g_hCookieEnable, "TF2 Show Ammo");
 		}
 	}
@@ -188,6 +191,31 @@ public AmmoCookieSettings(client, CookieMenuAction:action, any:info, String:buff
 				AddMenuItem(hMenu, "pos", "Position [Bottom]");
 			}
 		}
+		switch (g_aClientSettings[client][iChargeLevel])
+		{
+			case 1:
+			{
+				AddMenuItem(hMenu, "level", "Charge Level [1\%]");
+			}
+			case 25:
+			{
+				AddMenuItem(hMenu, "level", "Charge Level [25\%]");
+			}
+			case 50:
+			{
+				AddMenuItem(hMenu, "level", "Charge Level [50\%]");
+			}
+			case 75:
+			{
+				AddMenuItem(hMenu, "level", "Charge Level [75\%]");
+			}
+			default:
+			{
+				decl String:sBuffer[127];
+				Format(sBuffer, sizeof(sBuffer), "Charge Level [Server Default %i\%]", g_aClientSettings[client][iChargeLevel]);
+				AddMenuItem(hMenu, "level", sBuffer);
+			}
+		}
 		SetMenuExitBackButton(hMenu, true);
 		DisplayMenu(hMenu, client, MENU_TIME_FOREVER);
 	}
@@ -232,18 +260,30 @@ public Menu_CookieSettings(Handle:menu, MenuAction:action, param1, param2)
 			SetMenuExitBackButton(hMenu, true);
 			DisplayMenu(hMenu, client, MENU_TIME_FOREVER);
 		}
-		else
+		else if (StrEqual(sSelection, "pos", false))
 		{
 			new Handle:hMenu = CreateMenu(Menu_CookieSettingsPosition);
-			{
-				SetMenuTitle(hMenu, "Select Medic Ammo Position");
-				AddMenuItem(hMenu, "left", "Left Side Near Bottom");
-				AddMenuItem(hMenu, "midleft", "Left Side Higher Up");
-				AddMenuItem(hMenu, "center", "Middle of Screen High Up");
-				AddMenuItem(hMenu, "bottom", "Middle of Screen Bottom");
-				SetMenuExitBackButton(hMenu, true);
-				DisplayMenu(hMenu, client, MENU_TIME_FOREVER);
-			}
+			SetMenuTitle(hMenu, "Select Medic Ammo Position");
+			AddMenuItem(hMenu, "left", "Left Side Near Bottom");
+			AddMenuItem(hMenu, "midleft", "Left Side Higher Up");
+			AddMenuItem(hMenu, "center", "Middle of Screen High Up");
+			AddMenuItem(hMenu, "bottom", "Middle of Screen Bottom");
+			SetMenuExitBackButton(hMenu, true);
+			DisplayMenu(hMenu, client, MENU_TIME_FOREVER);
+		}
+		else
+		{
+			new Handle:hMenu = CreateMenu(Menu_CookieSettingsChargeLevel);
+			decl String:sBuffer[128];
+			new iDefault = RoundFloat(FloatMul(GetConVarFloat(g_hVarChargeLevel), 100.0));
+			Format(sBuffer, sizeof(sBuffer), "Default Setting %i\%", iDefault);
+			SetMenuTitle(hMenu, "Select Charge Level To See Ammo Counts");
+			AddMenuItem(hMenu, "25", "25\%");
+			AddMenuItem(hMenu, "50", "50\%");
+			AddMenuItem(hMenu, "75", "75\%");
+			AddMenuItem(hMenu, "-1", sBuffer);
+			SetMenuExitBackButton(hMenu, true);
+			DisplayMenu(hMenu, client, MENU_TIME_FOREVER);
 		}
 	}
 	else if (action == MenuAction_Cancel) 
@@ -276,7 +316,7 @@ public Menu_CookieSettingsEnable(Handle:menu, MenuAction:action, param1, param2)
 		{
 			SetClientCookie(client, g_hCookieEnable, "disabled");
 			g_aClientSettings[client][bEnabled] = 0;
-			PrintToChat(client, "[SM] TF2 Show Ammo is is DISABLED for you");
+			PrintToChat(client, "[SM] TF2 Show Ammo is now DISABLED for you");
 		}
 	}
 	else if (action == MenuAction_Cancel) 
@@ -364,12 +404,12 @@ if (action == MenuAction_Select)
 		{
 			g_aClientSettings[client][iPosition] = POS_MIDLEFT;
 			SetClientCookie(client, g_hCookiePosition, "midleft");
-			PrintToChat(client, "[SM] Position set to HISH LEFT");
+			PrintToChat(client, "[SM] Position set to HIGH LEFT");
 		}
 		if (StrEqual(sSelection, "center", false))
 		{
 			g_aClientSettings[client][iPosition] = POS_CENTER;
-			SetClientCookie(client, g_hCookiePosition, "left");
+			SetClientCookie(client, g_hCookiePosition, "center");
 			PrintToChat(client, "[SM] Position set to CENTER HIGH");
 		}
 		if (StrEqual(sSelection, "bottom", false))
@@ -378,6 +418,34 @@ if (action == MenuAction_Select)
 			SetClientCookie(client, g_hCookiePosition, "bottom");
 			PrintToChat(client, "[SM] Position set to BOTTOM");
 		}
+	}
+	else if (action == MenuAction_Cancel) 
+	{
+		if (param2 == MenuCancel_ExitBack)
+		{
+			ShowCookieMenu(client);
+		}
+	}
+	else if (action == MenuAction_End)
+	{
+		CloseHandle(menu);
+	}
+}
+
+public Menu_CookieSettingsChargeLevel(Handle:menu, MenuAction:action, client, param2)
+{
+	if (action == MenuAction_Select) 
+	{
+		new String:sBuffer[120], iSelection;
+		GetMenuItem(menu, param2, sBuffer, sizeof(sBuffer));
+		iSelection = StringToInt(sBuffer);
+		if (iSelection == -1)
+		{
+			iSelection = RoundFloat(FloatMul(GetConVarFloat(g_hVarChargeLevel), 100.0));
+		}
+		g_aClientSettings[client][iChargeLevel] = iSelection;
+		SetClientCookie(client, g_hCookieCharge, sBuffer);
+		PrintToChat(client, "[SM] Charge Level set to %i\%", iSelection);
 	}
 	else if (action == MenuAction_Cancel) 
 	{
@@ -448,6 +516,18 @@ public OnClientCookiesCached(client)
 	{
 		g_aClientSettings[client][iPosition] = POS_LEFT;
 	}
+	
+	GetClientCookie(client, g_hCookieCharge, sSetting, sizeof(sSetting));
+	{
+		if (StringToInt(sSetting) > 1)
+		{
+			g_aClientSettings[client][iChargeLevel] = StringToInt(sSetting);
+		}
+		else
+		{
+			g_aClientSettings[client][iChargeLevel] = RoundFloat(FloatMul(GetConVarFloat(g_hVarChargeLevel), 100.0));
+		}
+	}
 }
 
 public Action:Timer_MedicCheck(Handle:timer)
@@ -501,11 +581,11 @@ stock ShowInfo(medic, target)
 	if (class == TFClass_Pyro || class == TFClass_Heavy)
 	{
 		iAmmo1 = GetHeavyPyroAmmo(target);
-		Format(sMessage, sizeof(sMessage), "#1 Ammo: %i ", iAmmo1);
+		Format(sMessage, sizeof(sMessage), "#1 Ammo: '%i' ", iAmmo1);
 	}	
 	if (iClip1 != -1)
 	{
-		Format(sMessage, sizeof(sMessage), "#1 Clip: %i ", iClip1);
+		Format(sMessage, sizeof(sMessage), "#1 Clip: '%i' ", iClip1);
 	}
 
 	if (class == TFClass_DemoMan)
@@ -513,16 +593,16 @@ stock ShowInfo(medic, target)
 
 		if (iClip2 != -1 && class != TFClass_Medic)
 		{
-			Format(sMessage, sizeof(sMessage), "%s#2 Clip: %i ", sMessage, iClip2);
+			Format(sMessage, sizeof(sMessage), "%s#2 Clip: '%i' ", sMessage, iClip2);
 		}
 	}	
 	if (iAmmo1 != -1 && class != TFClass_Heavy && class != TFClass_Pyro)
 	{
-		Format(sMessage, sizeof(sMessage), "%s #1 Ammo: %i ", sMessage, iAmmo1);
+		Format(sMessage, sizeof(sMessage), "%s #1 Ammo: '%i' ", sMessage, iAmmo1);
 	}
 	if (iAmmo2 != -1 && class == TFClass_DemoMan)
 	{
-		Format(sMessage, sizeof(sMessage), "%s#2 Ammo: %i ", sMessage, iAmmo2);
+		Format(sMessage, sizeof(sMessage), "%s#2 Ammo: '%i' ", sMessage, iAmmo2);
 	}	
 	SetHudTextParams(g_fTextPositions[iPos][0], g_fTextPositions[iPos][1], 1.0, g_iColors[iColorSetting][0], g_iColors[iColorSetting][1], g_iColors[iColorSetting][2], 255);
 	ShowSyncHudText(medic, h_HudMessage, sMessage);
@@ -605,7 +685,7 @@ stock bool:TF2_IsClientUberCharged(client)
 	{			
 		new entityIndex = GetPlayerWeaponSlot(client, 1);
 		new Float:chargeLevel = GetEntPropFloat(entityIndex, Prop_Send, "m_flChargeLevel");
-		if (chargeLevel >= GetConVarFloat(g_hVarChargeLevel))				
+		if (chargeLevel >= FloatDiv(float(g_aClientSettings[client][iChargeLevel]), 100.0))				
 			return true;				
 	}
 	return false;
