@@ -32,7 +32,7 @@ $Copyright: (c) Tf2Tmng 2009-2011$
 *************************************************************************
 *************************************************************************
 */
-#define PL_VERSION "1.02"
+#define PL_VERSION "1.0.3"
 #pragma semicolon 1
 #include <sourcemod>
 #include <tf2>
@@ -80,7 +80,9 @@ enum e_ClientSettings
 	bEnabled,
 	iPosition,
 	iColor,
-	iChargeLevel
+	iChargeLevel,
+	iMaxClip1,
+	iMaxClip2,
 };
 
 new g_aClientSettings[MAXPLAYERS+1][e_ClientSettings];
@@ -100,6 +102,7 @@ public OnPluginStart()
 	h_HudMessage = CreateHudSynchronizer();
 	g_hVarUpdateSpeed = CreateConVar("sm_showammo_update_speed", "0.5", "Delay between updates", FCVAR_PLUGIN, true, 0.1, true, 5.0);
 	g_hVarChargeLevel = CreateConVar("sm_showammo_charge_level", "0.90", "Default charge level where medics see ammo counts", FCVAR_PLUGIN, true, 0.0, true, 1.0);
+	HookEvent("player_spawn", Event_PlayerSpawn, EventHookMode_Post);
 	
 	decl String:sExtError[256];
 	new iExtStatus = GetExtensionFileStatus("clientprefs.ext", sExtError, sizeof(sExtError));
@@ -120,6 +123,23 @@ public OnPluginStart()
 		LogAction(0, -1, "tf2_showammo has detected errors in your clientprefs installation. %s", sExtError);
 	}
 	AutoExecConfig();
+}
+
+public Event_PlayerSpawn(Handle:event, const String:name[], bool:dontBroadcast)
+{
+	new userid = GetEventInt(event, "userid");
+	// delay this in case another plugin is modifying the ammo
+	CreateTimer(0.1, Timer_GetMaxAmmo, userid);
+}
+
+public Action:Timer_GetMaxAmmo(Handle:timer, any:userid)
+{
+	new client = GetClientOfUserId(userid);
+	if (client)
+	{
+		g_aClientSettings[client][iMaxClip1] = TF2_WeaponClip(TF2_GetSlotWeapon(client, 0));
+		g_aClientSettings[client][iMaxClip2] = TF2_WeaponClip(TF2_GetSlotWeapon(client, 1));
+	}
 }
 
 public OnMapStart()
@@ -558,13 +578,11 @@ stock ShowInfo(medic, target)
 	{
 		return;
 	}
-	new TFClassType:class, iAmmo1, iAmmo2, iClip1, iClip2, 
+	new TFClassType:class, iAmmo1, iClip1, iClip2, 
 		iColorSetting = g_aClientSettings[medic][iColor],
 		iPos = g_aClientSettings[medic][iPosition];
 	new String:sMessage[255];
-	iAmmo1 = TF2_GetSlotAmmo(target, 0);
 	iClip1 = TF2_WeaponClip(TF2_GetSlotWeapon(target, 0));
-	iAmmo2 = TF2_GetSlotAmmo(target, 1);
 	iClip2 = TF2_WeaponClip(TF2_GetSlotWeapon(target, 1));
 	if (iColorSetting == COLOR_TEAM)
 	{
@@ -581,11 +599,19 @@ stock ShowInfo(medic, target)
 	if (class == TFClass_Pyro || class == TFClass_Heavy)
 	{
 		iAmmo1 = GetHeavyPyroAmmo(target);
-		Format(sMessage, sizeof(sMessage), "#1 Ammo: '%i' ", iAmmo1);
-	}	
+		Format(sMessage, sizeof(sMessage), "Primary Ammo: '%i' ", iAmmo1);
+	}
+	else if (iClip1 == -1)
+	{
+		iAmmo1 = TF2_GetSlotAmmo(target, 0);
+		if (iAmmo1 != -1)
+		{
+			Format(sMessage, sizeof(sMessage), "Pimary Ammo: '%i' ", iAmmo1);
+		}
+	}
 	if (iClip1 != -1)
 	{
-		Format(sMessage, sizeof(sMessage), "#1 Clip: '%i' ", iClip1);
+		Format(sMessage, sizeof(sMessage), "Primary Ammo: '%i' / '%i' ", iClip1, g_aClientSettings[target][iMaxClip1]);
 	}
 
 	if (class == TFClass_DemoMan)
@@ -593,17 +619,9 @@ stock ShowInfo(medic, target)
 
 		if (iClip2 != -1 && class != TFClass_Medic)
 		{
-			Format(sMessage, sizeof(sMessage), "%s#2 Clip: '%i' ", sMessage, iClip2);
+			Format(sMessage, sizeof(sMessage), "%sSecondary Ammo: '%i' / '%i' ", sMessage, iClip2, g_aClientSettings[target][iMaxClip2]);
 		}
-	}	
-	if (iAmmo1 != -1 && class != TFClass_Heavy && class != TFClass_Pyro)
-	{
-		Format(sMessage, sizeof(sMessage), "%s #1 Ammo: '%i' ", sMessage, iAmmo1);
 	}
-	if (iAmmo2 != -1 && class == TFClass_DemoMan)
-	{
-		Format(sMessage, sizeof(sMessage), "%s#2 Ammo: '%i' ", sMessage, iAmmo2);
-	}	
 	SetHudTextParams(g_fTextPositions[iPos][0], g_fTextPositions[iPos][1], 1.0, g_iColors[iColorSetting][0], g_iColors[iColorSetting][1], g_iColors[iColorSetting][2], 255);
 	ShowSyncHudText(medic, h_HudMessage, sMessage);
 }
