@@ -69,13 +69,20 @@ public Plugin:myinfo =
 	url = "http://tf2tmng.googlecode.com/"
 };
 
+public OnClientConnected(client)
+{
+	g_iFrags[client] = 0;
+}
+
 public OnPluginStart()
 {
 	HookEvent("teamplay_round_start", 		Event_RoundStart, EventHookMode_PostNoCopy);
 	HookEvent("player_spawn", Event_PlayerSpawn, EventHookMode_Post);
 	HookEvent("player_death", Event_PlayerDeath, EventHookMode_Post);
-	g_VarTime = CreateConVar("tf2_pregame_timelimit", "45", "time in seconds that pregame lasts", FCVAR_PLUGIN, true, 10.0, false);
+	g_VarTime = CreateConVar("tf2_pregame_timelimit", "60", "time in seconds that pregame lasts", FCVAR_PLUGIN, true, 10.0, false);
 	AutoExecConfig();
+	
+	CreateConVar("sm_pregame_slaughter_version", PL_VERSION, _, FCVAR_PLUGIN|FCVAR_SPONLY|FCVAR_REPLICATED|FCVAR_NOTIFY|FCVAR_DONTRECORD);
 }
 
 public OnConfigsExecuted()
@@ -87,15 +94,15 @@ public Action:Event_PlayerDeath(Handle:event, const String:name[], bool:dontBroa
 {
 	if (g_bPreGame)
 	{
-		if (GetEventInt(event, "death_flags") & 32)
-		{
-			return Plugin_Continue;
-		}
 		new iUserId = GetEventInt(event, "userid");
 		new iClient = GetClientOfUserId(GetEventInt(event, "attacker"));
 		if (iClient)
 		{
 			g_iFrags[iClient]++;
+			if (!IsFakeClient(iClient))
+			{
+				PrintHintText(iClient, "TeamKills: %i", g_iFrags[iClient]);
+			}
 		}
 		CreateTimer(0.3, Timer_Spawn, iUserId);
 	}
@@ -155,20 +162,49 @@ public Action:Timer_Cond(Handle:timer, any:userid)
 			{
 				case MINI_CRIT:
 				{
-					TF2_AddCondition(client, TFCond_Buffed, 100.0);
+					TF2_AddCondition(client, TFCond_Buffed, GetConVarFloat(g_VarTime));
 				}
 				case FULL_CRIT:
 				{
-					TF2_AddCondition(client, TFCond_Kritzkrieged, 100.0);
+					TF2_AddCondition(client, TFCond_Kritzkrieged, GetConVarFloat(g_VarTime));
 				}
 			}
 			if (g_iMelee)
 			{
 				RemoveWeapons(client);
 			}
+			else
+			{
+				RemoveFlameMedi(client);
+			}
+			PrintToChat(client, "[SM] Pregame Slaughter is ACTIVE. KILL YOUR TEAMMATES!");
 		}
 	}
 	return Plugin_Handled;
+}
+
+stock RemoveFlameMedi(client)
+{
+	new TFClassType:iClass = TF2_GetPlayerClass(client),
+		iWeapon = -1;
+	if (iClass == TFClass_Pyro)
+	{	
+		iWeapon = GetPlayerWeaponSlot(client, 0);
+		if (iWeapon != -1)
+		{
+			TF2_RemoveWeaponSlot(client, 0);
+		}
+		SetEntPropEnt(client, Prop_Send, "m_hActiveWeapon", GetPlayerWeaponSlot(client, 1));
+	}
+	if (iClass == TFClass_Medic)
+	{
+		iWeapon = GetPlayerWeaponSlot(client, 1);
+		if (iWeapon != -1)
+		{
+			TF2_RemoveWeaponSlot(client, 1);
+		}
+		SetEntPropEnt(client, Prop_Send, "m_hActiveWeapon", GetPlayerWeaponSlot(client, 0));
+	}
 }
 
 stock RemoveWeapons(client)
@@ -193,7 +229,19 @@ stock StartPreGame()
 	g_iMelee = GetRandomInt(0,1);
 	SetConVarBool(FindConVar("mp_friendlyfire"), true);
 	SetConVarBool(FindConVar("tf_avoidteammates"), false);
-	DisableLockers();
+	ModifyLockers("disable");
+	RespawnAll();
+}
+
+stock RespawnAll()
+{
+	for (new i=1; i<= MaxClients; i++)
+	{
+		if (IsClientInGame(i) && GetClientTeam(i) > 1 && TF2_GetPlayerClass(i) != TFClass_Unknown)
+		{
+			TF2_RespawnPlayer(i);
+		}
+	}
 }
 
 stock StopPreGame()
@@ -203,11 +251,13 @@ stock StopPreGame()
 		g_bPreGame = false;
 		SetConVarBool(FindConVar("mp_friendlyfire"), false);
 		SetConVarBool(FindConVar("tf_avoidteammates"), true);
-		EnableLockers();
+		ModifyLockers("enable");
 		CreateTimer(0.5, Timer_Winners);
+		/**
 		AddNotify("mp_friendlyfire");
 		AddNotify("sv_tags");
 		AddNotify("tf_avoidteammates");
+		*/
 	}
 }
 
@@ -317,20 +367,11 @@ stock AddNotify(const String:setting[])
 	}
 }
 
-stock EnableLockers() 
+stock ModifyLockers(const String:input[]) 
 {
 	new iEnt = -1;
 	while ((iEnt = FindEntityByClassname(iEnt, "func_regenerate")) != -1) 
 	{
-		AcceptEntityInput(iEnt, "Enable");
-	}
-}
-
-stock DisableLockers() 
-{
-	new iEnt = -1;
-	while ((iEnt = FindEntityByClassname(iEnt, "func_regenerate")) != -1) 
-	{
-		AcceptEntityInput(iEnt, "Disable");
+		AcceptEntityInput(iEnt, input);
 	}
 }
