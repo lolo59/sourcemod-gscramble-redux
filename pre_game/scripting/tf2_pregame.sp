@@ -49,7 +49,7 @@ new bool:g_bBlockLog;
 
 new g_iFrags[MAXPLAYERS+1];
 
-#define PL_VERSION "1.0.2"
+#define PL_VERSION "1.0.3"
 
 new Handle:g_hVarTime = INVALID_HANDLE;
 new Handle:g_hVarStats = INVALID_HANDLE;
@@ -333,17 +333,23 @@ public Action:Timer_Winners(Handle:timer)
 		DrawPanelText(hMenu, "Red Team Winners\n");
 		for (new i; i < 3; i++)
 		{
-			GetClientName(iRedScores[i][0], sNameBuffer, sizeof(sNameBuffer));
-			Format(sBuffer, sizeof(sBuffer), "%i  '%i' Frags: %s", i+1, iRedScores[i][1], sNameBuffer);
-			DrawPanelText(hMenu, sBuffer);
+			if (IsClientInGame(iRedScores[i][0]))
+			{
+				GetClientName(iRedScores[i][0], sNameBuffer, sizeof(sNameBuffer));
+				Format(sBuffer, sizeof(sBuffer), "%i  '%i' Frags: %s", i+1, iRedScores[i][1], sNameBuffer);
+				DrawPanelText(hMenu, sBuffer);
+			}
 		}
 		DrawPanelText(hMenu, "-----------------");
 		DrawPanelText(hMenu, "Blue Team Winners\n");
 		for (new i; i < 3; i++)
 		{
-			GetClientName(iBluScores[i][0], sNameBuffer, sizeof(sNameBuffer));
-			Format(sBuffer, sizeof(sBuffer), "%i  '%i' Frags: %s", i+1, iBluScores[i][1], sNameBuffer);
-			DrawPanelText(hMenu, sBuffer);
+			if (IsClientInGame(iBluScores[i][0]))
+			{
+				GetClientName(iBluScores[i][0], sNameBuffer, sizeof(sNameBuffer));
+				Format(sBuffer, sizeof(sBuffer), "%i  '%i' Frags: %s", i+1, iBluScores[i][1], sNameBuffer);
+				DrawPanelText(hMenu, sBuffer);
+			}
 		}
 		DrawPanelItem(hMenu, "exit");
 		for (new i = 1; i <= MaxClients; i++)
