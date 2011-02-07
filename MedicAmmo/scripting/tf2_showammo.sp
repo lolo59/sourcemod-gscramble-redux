@@ -599,19 +599,19 @@ stock ShowInfo(medic, target)
 	if (class == TFClass_Pyro || class == TFClass_Heavy)
 	{
 		iAmmo1 = GetHeavyPyroAmmo(target);
-		Format(sMessage, sizeof(sMessage), "Primary Ammo: '%i' ", iAmmo1);
+		Format(sMessage, sizeof(sMessage), "Primary Ammo: %i ", iAmmo1);
 	}
 	else if (iClip1 == -1)
 	{
 		iAmmo1 = TF2_GetSlotAmmo(target, 0);
 		if (iAmmo1 != -1)
 		{
-			Format(sMessage, sizeof(sMessage), "Pimary Ammo: '%i' ", iAmmo1);
+			Format(sMessage, sizeof(sMessage), "Pimary Ammo: %i ", iAmmo1);
 		}
 	}
 	if (iClip1 != -1)
 	{
-		Format(sMessage, sizeof(sMessage), "Primary Ammo: '%i' / '%i' ", iClip1, g_aClientSettings[target][iMaxClip1]);
+		Format(sMessage, sizeof(sMessage), "Primary Ammo: %i / %i ", iClip1, g_aClientSettings[target][iMaxClip1]);
 	}
 
 	if (class == TFClass_DemoMan)
@@ -619,7 +619,7 @@ stock ShowInfo(medic, target)
 
 		if (iClip2 != -1 && class != TFClass_Medic)
 		{
-			Format(sMessage, sizeof(sMessage), "%sSecondary Ammo: '%i' / '%i' ", sMessage, iClip2, g_aClientSettings[target][iMaxClip2]);
+			Format(sMessage, sizeof(sMessage), "%sSecondary Ammo: %i / %i ", sMessage, iClip2, g_aClientSettings[target][iMaxClip2]);
 		}
 	}
 	SetHudTextParams(g_fTextPositions[iPos][0], g_fTextPositions[iPos][1], 1.0, g_iColors[iColorSetting][0], g_iColors[iColorSetting][1], g_iColors[iColorSetting][2], 255);

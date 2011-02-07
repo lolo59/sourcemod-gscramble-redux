@@ -57,7 +57,7 @@ delete these 2 lines if you want to compile without those thingies.
 #endif
 #define REQUIRE_PLUGIN
 
-#define VERSION "3.0.25"
+#define VERSION "3.0.26"
 #define TEAM_RED 2
 #define TEAM_BLUE 3
 #define SCRAMBLE_SOUND "vo/announcer_am_teamscramble03.wav"
@@ -1058,6 +1058,7 @@ hook()
 	HookEvent("object_destroyed", 			hook_ObjectDestroyed, EventHookMode_Post);
 	HookEvent("teamplay_flag_event",		hook_FlagEvent, EventHookMode_Post);
 	HookUserMessage(GetUserMessageId("TextMsg"), UserMessageHook_Class, false);
+	AddGameLogHook(LogHook);
 	HookEvent("teamplay_game_over", hook_GameEnd, EventHookMode_PostNoCopy);
 	HookEvent("player_chargedeployed", hook_UberDeploy, EventHookMode_Post);
 	HookEvent("player_sapped_object", hook_Sapper, EventHookMode_Post);
@@ -1065,6 +1066,14 @@ hook()
 	HookEvent("player_escort_score", hook_EscortScore, EventHookMode_Post);	
 	HookEvent("teamplay_timer_time_added", TimerUpdateAdd, EventHookMode_Post);
 	g_bHooked = true;
+}
+
+public Action:LogHook(const String:message[])
+{
+	if (g_bBlockDeath)
+		return Plugin_Handled;
+	
+	return Plugin_Continue;
 }
 
 unHook()

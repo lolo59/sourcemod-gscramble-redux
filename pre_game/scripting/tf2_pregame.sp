@@ -45,20 +45,23 @@ $Copyright: (c) Tf2Tmng 2009-2011$
 new g_iCrits;
 new g_iMelee;
 new bool:g_bPreGame;
+new bool:g_bBlockLog;
 
 new g_iFrags[MAXPLAYERS+1];
 
-#define PL_VERSION "1.0.0"
+#define PL_VERSION "1.0.2"
 
-new Handle:g_VarTime;
+new Handle:g_hVarTime = INVALID_HANDLE;
+new Handle:g_hVarStats = INVALID_HANDLE;
 
 enum e_RoundState
 {
 	newMap,
 	preGame,
-	normal
+	normal,
+	lateLoad
 };
-new e_RoundState:g_iRoundState;
+new e_RoundState:g_RoundState;
 
 public Plugin:myinfo = 
 {
@@ -69,6 +72,15 @@ public Plugin:myinfo =
 	url = "http://tf2tmng.googlecode.com/"
 };
 
+public APLRes:AskPluginLoad2(Handle:myself, bool:late, String:error[], err_max)
+{
+	if (late)
+	{
+		g_RoundState = lateLoad;
+	}
+	return APLRes_Success;
+}
+
 public OnClientConnected(client)
 {
 	g_iFrags[client] = 0;
@@ -78,8 +90,12 @@ public OnPluginStart()
 {
 	HookEvent("teamplay_round_start", 		Event_RoundStart, EventHookMode_PostNoCopy);
 	HookEvent("player_spawn", Event_PlayerSpawn, EventHookMode_Post);
+	HookEvent("player_death", Event_PlayerDeathPre, EventHookMode_Pre);
 	HookEvent("player_death", Event_PlayerDeath, EventHookMode_Post);
-	g_VarTime = CreateConVar("tf2_pregame_timelimit", "60", "time in seconds that pregame lasts", FCVAR_PLUGIN, true, 10.0, false);
+	AddGameLogHook(LogHook);
+	g_hVarTime = CreateConVar("tf2_pregame_timelimit", "60", "time in seconds that pregame lasts", FCVAR_PLUGIN, true, 10.0, false);
+	g_hVarStats = CreateConVar("tf2_pregame_stats", "1", "Track the number of kills people get during", FCVAR_PLUGIN, true, 0.0, true, 1.0);
+	
 	AutoExecConfig();
 	
 	CreateConVar("sm_pregame_slaughter_version", PL_VERSION, _, FCVAR_PLUGIN|FCVAR_SPONLY|FCVAR_REPLICATED|FCVAR_NOTIFY|FCVAR_DONTRECORD);
@@ -87,16 +103,34 @@ public OnPluginStart()
 
 public OnConfigsExecuted()
 {
-	SetConVarInt(FindConVar("mp_waitingforplayers_time"), GetConVarInt(g_VarTime));
+	SetConVarInt(FindConVar("mp_waitingforplayers_time"), GetConVarInt(g_hVarTime));
 }
 
-public Action:Event_PlayerDeath(Handle:event, const String:name[], bool:dontBroadcast)
+public Action:Event_PlayerDeathPre(Handle:event, const String:name[], bool:dontBroadcast)
 {
+	if (g_bPreGame)
+	{
+		g_bBlockLog = true;
+	}
+	return Plugin_Continue;
+}
+
+public Action:LogHook(const String:message[])
+{
+	if (g_bBlockLog)
+		return Plugin_Handled;
+	
+	return Plugin_Continue;
+}
+
+public Event_PlayerDeath(Handle:event, const String:name[], bool:dontBroadcast)
+{
+	g_bBlockLog = false;
 	if (g_bPreGame)
 	{
 		new iUserId = GetEventInt(event, "userid");
 		new iClient = GetClientOfUserId(GetEventInt(event, "attacker"));
-		if (iClient)
+		if (iClient && GetConVarBool(g_hVarStats))
 		{
 			g_iFrags[iClient]++;
 			if (!IsFakeClient(iClient))
@@ -106,7 +140,6 @@ public Action:Event_PlayerDeath(Handle:event, const String:name[], bool:dontBroa
 		}
 		CreateTimer(0.3, Timer_Spawn, iUserId);
 	}
-	return Plugin_Continue;
 }
 
 public Action:Timer_Spawn(Handle:timer, any:userid)
@@ -124,31 +157,35 @@ public Action:Timer_Spawn(Handle:timer, any:userid)
 
 public Event_RoundStart(Handle:event, const String:name[], bool:dontBroadcast)
 {
-	switch (g_iRoundState)
+	switch (g_RoundState)
 	{
 		case newMap:
 		{
-			g_iRoundState = preGame;
+			g_RoundState = preGame;
 		}
 		case preGame:
 		{
-			g_iRoundState = normal;
+			g_RoundState = normal;
+		}
+		case lateLoad:
+		{
+			g_RoundState = normal;
 		}
 	}
-	if (g_iRoundState == preGame)
+	if (g_RoundState == preGame)
 	{
 		StartPreGame();
 	}
 	else StopPreGame();
 }
 
-public Action:Event_PlayerSpawn(Handle:event, const String:name[], bool:dontBroadcast)
+public Event_PlayerSpawn(Handle:event, const String:name[], bool:dontBroadcast)
 {
 	if (!g_bPreGame)
-		return Plugin_Continue;
+		return;
 	
 	CreateTimer(0.2, Timer_Cond, GetEventInt(event, "userid"));
-	return Plugin_Continue;
+	return;
 }
 
 public Action:Timer_Cond(Handle:timer, any:userid)
@@ -162,11 +199,11 @@ public Action:Timer_Cond(Handle:timer, any:userid)
 			{
 				case MINI_CRIT:
 				{
-					TF2_AddCondition(client, TFCond_Buffed, GetConVarFloat(g_VarTime));
+					TF2_AddCondition(client, TFCond_Buffed, GetConVarFloat(g_hVarTime));
 				}
 				case FULL_CRIT:
 				{
-					TF2_AddCondition(client, TFCond_Kritzkrieged, GetConVarFloat(g_VarTime));
+					TF2_AddCondition(client, TFCond_Kritzkrieged, GetConVarFloat(g_hVarTime));
 				}
 			}
 			if (g_iMelee)
@@ -252,7 +289,10 @@ stock StopPreGame()
 		SetConVarBool(FindConVar("mp_friendlyfire"), false);
 		SetConVarBool(FindConVar("tf_avoidteammates"), true);
 		ModifyLockers("enable");
-		CreateTimer(0.5, Timer_Winners);
+		if (GetConVarBool(g_hVarStats))
+		{
+			CreateTimer(0.5, Timer_Winners);
+		}
 		/**
 		AddNotify("mp_friendlyfire");
 		AddNotify("sv_tags");
@@ -335,7 +375,14 @@ public OnMapStart()
 	StripNotify("mp_friendlyfire");
 	StripNotify("sv_tags");
 	StripNotify("tf_avoidteammates");
-	g_iRoundState = newMap;
+	if (g_RoundState != lateLoad)
+	{
+		g_RoundState = newMap;
+	}
+	else
+	{
+		g_RoundState = normal;
+	}
 	g_bPreGame = false;
 }
 
