@@ -49,7 +49,7 @@ new bool:g_bBlockLog;
 
 new g_iFrags[MAXPLAYERS+1];
 
-#define PL_VERSION "1.0.3"
+#define PL_VERSION "1.0.4"
 
 new Handle:g_hVarTime = INVALID_HANDLE;
 new Handle:g_hVarStats = INVALID_HANDLE;
@@ -193,7 +193,7 @@ public Action:Timer_Cond(Handle:timer, any:userid)
 	if (g_bPreGame)
 	{
 		new client = GetClientOfUserId(userid);
-		if (client)
+		if (client && IsPlayerAlive(client))
 		{
 			switch (g_iCrits)
 			{
@@ -289,7 +289,7 @@ stock StopPreGame()
 		SetConVarBool(FindConVar("mp_friendlyfire"), false);
 		SetConVarBool(FindConVar("tf_avoidteammates"), true);
 		ModifyLockers("enable");
-		if (GetConVarBool(g_hVarStats))
+		if (GetConVarBool(g_hVarStats) && GetClientCount(true) > 2)
 		{
 			CreateTimer(0.5, Timer_Winners);
 		}
@@ -303,8 +303,8 @@ stock StopPreGame()
 
 public Action:Timer_Winners(Handle:timer)
 {
-	new iRedScores[GetTeamClientCount(2)][2],
-		iBluScores[GetTeamClientCount(3)][2],
+	new iRedScores[MaxClients][2],
+		iBluScores[MaxClients][2],
 		iRedCount,
 		iBluCount;
 	for (new i = 1; i<= MaxClients; i++)
@@ -327,8 +327,8 @@ public Action:Timer_Winners(Handle:timer)
 	{
 		decl String:sNameBuffer[MAX_NAME_LENGTH+1];
 		decl String:sBuffer[255];
-		SortCustom2D(iRedScores, GetTeamClientCount(2), SortIntsDesc);
-		SortCustom2D(iBluScores, GetTeamClientCount(3), SortIntsDesc);
+		SortCustom2D(iRedScores, iRedCount, SortIntsDesc);
+		SortCustom2D(iBluScores, iBluCount, SortIntsDesc);
 		new Handle:hMenu = CreatePanel();
 		DrawPanelText(hMenu, "Red Team Winners\n");
 		for (new i; i < 3; i++)
@@ -364,7 +364,10 @@ public Action:Timer_Winners(Handle:timer)
 
 public Panel_Callback(Handle:menu, MenuAction:action, param1, param2)
 {
-	CloseHandle(menu);
+	if (action == MenuAction_End)
+	{
+		CloseHandle(menu);
+	}
 }
 
 public SortIntsDesc(x[], y[], array[][], Handle:data)		// this sorts everything in the info array descending
