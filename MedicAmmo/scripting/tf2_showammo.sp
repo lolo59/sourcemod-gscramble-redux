@@ -32,7 +32,7 @@ $Copyright: (c) Tf2Tmng 2009-2011$
 *************************************************************************
 *************************************************************************
 */
-#define PL_VERSION "1.0.4"
+#define PL_VERSION "1.0.5"
 #pragma semicolon 1
 #include <sourcemod>
 #include <tf2>
@@ -57,6 +57,8 @@ $Copyright: (c) Tf2Tmng 2009-2011$
 
 new Handle:g_hVarUpdateSpeed = INVALID_HANDLE;
 new Handle:g_hVarChargeLevel = INVALID_HANDLE;
+new Handle:g_hVarWho			= INVALID_HANDLE;
+new Handle:g_hVarAdminFlag		= INVALID_HANDLE;
 
 new Handle:g_hCookieEnable 	= INVALID_HANDLE,
 	Handle:g_hCookiePosition 	= INVALID_HANDLE,
@@ -102,6 +104,9 @@ public OnPluginStart()
 	h_HudMessage = CreateHudSynchronizer();
 	g_hVarUpdateSpeed = CreateConVar("sm_showammo_update_speed", "0.5", "Delay between updates", FCVAR_PLUGIN, true, 0.1, true, 5.0);
 	g_hVarChargeLevel = CreateConVar("sm_showammo_charge_level", "0.90", "Default charge level where medics see ammo counts", FCVAR_PLUGIN, true, 0.0, true, 1.0);
+	g_hVarWho = CreateConVar("sm_showammo_who", "0", "Who sees the ammo counts, 0 for everyone, 1 for admins", FCVAR_PLUGIN, true, 0.0, true, 1.0);
+	g_hVarAdminFlag = CreateConVar("sm_showammo_flag", "a", "Admin flag for people who see the ammo counts", FCVAR_PLUGIN);
+	
 	HookEvent("player_spawn", Event_PlayerSpawn, EventHookMode_Post);
 	HookEvent("post_inventory_application", Event_PlayerSpawn, EventHookMode_Post);
 	
@@ -240,6 +245,17 @@ public AmmoCookieSettings(client, CookieMenuAction:action, any:info, String:buff
 		SetMenuExitBackButton(hMenu, true);
 		DisplayMenu(hMenu, client, MENU_TIME_FOREVER);
 	}
+}
+
+stock bool:IsAdmin(client, const String:flags[])
+{
+	new bits = GetUserFlagBits(client);	
+	if (bits & ADMFLAG_ROOT)
+		return true;
+	new iFlags = ReadFlagString(flags);
+	if (bits & iFlags)
+		return true;	
+	return false;
 }
 
 public Menu_CookieSettings(Handle:menu, MenuAction:action, param1, param2)
@@ -564,6 +580,15 @@ stock CheckHealers()
 	{
 		if (IsClientInGame(i)&& IsPlayerAlive(i) && !IsFakeClient(i) && g_aClientSettings[i][bEnabled])
 		{
+			if (GetConVarBool(g_hVarWho))
+			{
+				decl String:sFlags[33];
+				GetConVarString(g_hVarAdminFlag, sFlags, sizeof(sFlags));
+				if (!IsAdmin(i, sFlags))
+				{
+					continue;
+				}
+			}
 			iTarget = TF2_GetHealingTarget(i);
 			if (iTarget > 0)
 			{
