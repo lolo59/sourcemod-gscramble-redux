@@ -32,7 +32,7 @@ $Copyright: (c) Tf2Tmng 2009-2011$
 *************************************************************************
 *************************************************************************
 */
-#define PL_VERSION "1.0.5"
+#define PL_VERSION "1.0.6"
 #pragma semicolon 1
 #include <sourcemod>
 #include <tf2>
@@ -129,6 +129,7 @@ public OnPluginStart()
 		LogAction(0, -1, "tf2_showammo has detected errors in your clientprefs installation. %s", sExtError);
 	}
 	AutoExecConfig();
+	CreateTimer(GetConVarFloat(g_hVarUpdateSpeed), Timer_MedicCheck, _, TIMER_REPEAT);
 }
 
 public Event_PlayerSpawn(Handle:event, const String:name[], bool:dontBroadcast)
@@ -146,11 +147,6 @@ public Action:Timer_GetMaxAmmo(Handle:timer, any:userid)
 		g_aClientSettings[client][iMaxClip1] = TF2_WeaponClip(TF2_GetSlotWeapon(client, 0));
 		g_aClientSettings[client][iMaxClip2] = TF2_WeaponClip(TF2_GetSlotWeapon(client, 1));
 	}
-}
-
-public OnMapStart()
-{
-	CreateTimer(GetConVarFloat(g_hVarUpdateSpeed), Timer_MedicCheck, _, TIMER_REPEAT);
 }
 
 public AmmoCookieSettings(client, CookieMenuAction:action, any:info, String:buffer[], maxlen)
