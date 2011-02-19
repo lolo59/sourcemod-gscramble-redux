@@ -32,7 +32,7 @@ $Copyright: (c) Tf2Tmng 2009-2011$
 *************************************************************************
 *************************************************************************
 */
-#define PL_VERSION "1.0.6"
+#define PL_VERSION "1.0.7"
 #pragma semicolon 1
 #include <sourcemod>
 #include <tf2>
@@ -53,6 +53,7 @@ $Copyright: (c) Tf2Tmng 2009-2011$
 #define POS_MIDLEFT 	1
 #define POS_CENTER		2
 #define POS_BOTTOM		3
+#define POS_BLEFT		4
 
 
 new Handle:g_hVarUpdateSpeed = INVALID_HANDLE;
@@ -65,10 +66,11 @@ new Handle:g_hCookieEnable 	= INVALID_HANDLE,
 	Handle:g_hCookieColor 		= INVALID_HANDLE,
 	Handle:g_hCookieCharge 	= INVALID_HANDLE;
 
-new Float:g_fTextPositions[4][2] = { 	{0.01, 0.78},
+new Float:g_fTextPositions[5][2] = { 	{0.01, 0.78},
 										{0.01, 0.55},
 										{0.3, 0.25},
-										{0.3, 0.91} };
+										{0.3, 0.91},
+										{0.01, 1.0}		};
 new g_iColors[5][3] = { 	{255, 0, 0},
 							{180, 150, 255},
 							{255, 78, 140},
@@ -212,6 +214,10 @@ public AmmoCookieSettings(client, CookieMenuAction:action, any:info, String:buff
 			{
 				AddMenuItem(hMenu, "pos", "Position [Bottom]");
 			}
+			case POS_BLEFT:
+			{
+				AddMenuItem(hMenu, "pos", "Position [Bottom Left]");
+			}
 		}
 		switch (g_aClientSettings[client][iChargeLevel])
 		{
@@ -301,6 +307,7 @@ public Menu_CookieSettings(Handle:menu, MenuAction:action, param1, param2)
 			AddMenuItem(hMenu, "midleft", "Left Side Higher Up");
 			AddMenuItem(hMenu, "center", "Middle of Screen High Up");
 			AddMenuItem(hMenu, "bottom", "Middle of Screen Bottom");
+			AddMenuItem(hMenu, "bleft", "Left Side Bottom");
 			SetMenuExitBackButton(hMenu, true);
 			DisplayMenu(hMenu, client, MENU_TIME_FOREVER);
 		}
@@ -451,6 +458,12 @@ if (action == MenuAction_Select)
 			SetClientCookie(client, g_hCookiePosition, "bottom");
 			PrintToChat(client, "[SM] Position set to BOTTOM");
 		}
+		if (StrEqual(sSelection, "bleft", false))
+		{
+			g_aClientSettings[client][iPosition] = POS_BLEFT;
+			SetClientCookie(client, g_hCookiePosition, "bleft");
+			PrintToChat(client, "[SM] Position set to BOTTOM LEFT");
+		}
 	}
 	else if (action == MenuAction_Cancel) 
 	{
@@ -545,6 +558,10 @@ public OnClientCookiesCached(client)
 	{
 		g_aClientSettings[client][iPosition] = POS_BOTTOM;
 	}
+	else if (StrEqual(sSetting, "bleft", false))
+	{
+		g_aClientSettings[client][iPosition] = POS_BLEFT;
+	}
 	else
 	{
 		g_aClientSettings[client][iPosition] = POS_LEFT;
@@ -628,7 +645,7 @@ stock ShowInfo(medic, target)
 		iAmmo1 = TF2_GetSlotAmmo(target, 0);
 		if (iAmmo1 != -1)
 		{
-			Format(sMessage, sizeof(sMessage), "Pimary Ammo: %i ", iAmmo1);
+			Format(sMessage, sizeof(sMessage), "Primary Ammo: %i ", iAmmo1);
 		}
 	}
 	if (iClip1 != -1)
