@@ -49,7 +49,7 @@ new bool:g_bBlockLog;
 
 new g_iFrags[MAXPLAYERS+1];
 
-#define PL_VERSION "1.0.4"
+#define PL_VERSION "1.0.6"
 
 new Handle:g_hVarTime = INVALID_HANDLE;
 new Handle:g_hVarStats = INVALID_HANDLE;
@@ -289,7 +289,7 @@ stock StopPreGame()
 		SetConVarBool(FindConVar("mp_friendlyfire"), false);
 		SetConVarBool(FindConVar("tf_avoidteammates"), true);
 		ModifyLockers("enable");
-		if (GetConVarBool(g_hVarStats) && GetClientCount(true) > 2)
+		if (GetConVarBool(g_hVarStats) && GetTeamClientCount(2) > 2 && GetTeamClientCount(3) > 2)
 		{
 			CreateTimer(0.5, Timer_Winners);
 		}
@@ -354,7 +354,7 @@ public Action:Timer_Winners(Handle:timer)
 		DrawPanelItem(hMenu, "exit");
 		for (new i = 1; i <= MaxClients; i++)
 		{
-			if (IsClientInGame(i) && !IsFakeClient(i))
+			if (IsClientInGame(i) && GetClientTeam(i) > 1 && !IsFakeClient(i))
 			{
 				SendPanelToClient(hMenu, i, Panel_Callback, 20);
 			}
