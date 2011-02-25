@@ -197,13 +197,13 @@ CheckBalance(bool:post=false)
 flags the teams as being unbalanced
 */
 public Action:timer_BalanceFlag(Handle:timer)
-{	
+{
+	g_hBalanceFlagTimer = INVALID_HANDLE;
 	if (TeamsUnbalanced())
 	{
 		StartForceTimer();
 		g_aTeams[bImbalanced] = true;
 	}
-	g_hBalanceFlagTimer = INVALID_HANDLE;
 	return Plugin_Handled;
 }
 
