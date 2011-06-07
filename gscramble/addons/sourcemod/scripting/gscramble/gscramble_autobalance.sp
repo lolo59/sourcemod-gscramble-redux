@@ -248,7 +248,7 @@ stock BalanceTeams(bool:respawn=true)
 	new team = GetLargerTeam(), counter,
 		smallTeam = GetSmallerTeam(),
 		swaps = GetAbsValue(GetTeamClientCount(TEAM_RED), GetTeamClientCount(TEAM_BLUE)) / 2,
-		iTeamSize = GetTeamClientCount(team);
+		iTeamSize = GetClientCount();
 	new iFatTeam[iTeamSize][2];
 	for (new i = 1; i <= MaxClients; i++) 
 	{
@@ -278,7 +278,7 @@ stock BalanceTeams(bool:respawn=true)
 			counter++;
 		}
 	}	
-	SortCustom2D(iFatTeam, iTeamSize, SortIntsDesc); // sort the array so low prio players are on the bottom
+	SortCustom2D(iFatTeam, counter, SortIntsDesc); // sort the array so low prio players are on the bottom
 	g_bBlockDeath = true;	
 	for (new i = 0; swaps-- > 0 && i < counter; i++)
 	{
