@@ -2,7 +2,7 @@
 *************************************************************************
 gScramble
 Description:
-	Automatic scramble and balance script for CSS TF2 and DOD
+	Automatic scramble and balance script for TF2
 *************************************************************************
 *************************************************************************
 
@@ -57,7 +57,7 @@ delete these 2 lines if you want to compile without those thingies.
 #endif
 #define REQUIRE_PLUGIN
 
-#define VERSION "3.0.3"
+#define VERSION "3.0.7"
 #define TEAM_RED 2
 #define TEAM_BLUE 3
 #define SCRAMBLE_SOUND "vo/announcer_am_teamscramble03.wav"
