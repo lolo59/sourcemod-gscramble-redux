@@ -57,7 +57,7 @@ delete these 2 lines if you want to compile without those thingies.
 #endif
 #define REQUIRE_PLUGIN
 
-#define VERSION "3.0.2.6"
+#define VERSION "3.0.3"
 #define TEAM_RED 2
 #define TEAM_BLUE 3
 #define SCRAMBLE_SOUND "vo/announcer_am_teamscramble03.wav"
@@ -2292,19 +2292,22 @@ bool:IsValidTarget(client, e_ImmunityModes:mode)
 
 stock bool:IsValidSpectator(client)
 {
-	if (g_bSelectSpectators)
+	if (!IsFakeClient(client))
 	{
-		if (GetClientTeam(client) == 1)
+		if (g_bSelectSpectators)
 		{
-			new iChangeTime = g_aPlayers[client][iSpecChangeTime];
-			if (iChangeTime && (GetTime() - iChangeTime) < GetConVarInt(cvar_SelectSpectators))
+			if (GetClientTeam(client) == 1)
 			{
-				return true;
-			}
-			new Float:fTime = GetClientTime(client);
-			if (fTime <= 60.0)
-			{
-				return true;
+				new iChangeTime = g_aPlayers[client][iSpecChangeTime];
+				if (iChangeTime && (GetTime() - iChangeTime) < GetConVarInt(cvar_SelectSpectators))
+				{
+					return true;
+				}
+				new Float:fTime = GetClientTime(client);
+				if (fTime <= 60.0)
+				{
+					return true;
+				}
 			}
 		}
 	}

@@ -1,8 +1,8 @@
 /************************************************************************
 *************************************************************************
-Tf2 Show Ammow
+Tf2 Show Ammo
 Description:
-	Shows medics how mucha ammo the person they are healing has
+	Shows medics how much ammo the person they are healing has
 *************************************************************************
 *************************************************************************
 
@@ -149,6 +149,7 @@ public Action:Timer_GetMaxAmmo(Handle:timer, any:userid)
 		g_aClientSettings[client][iMaxClip1] = TF2_WeaponClip(TF2_GetSlotWeapon(client, 0));
 		g_aClientSettings[client][iMaxClip2] = TF2_WeaponClip(TF2_GetSlotWeapon(client, 1));
 	}
+	return Plugin_Handled;
 }
 
 public AmmoCookieSettings(client, CookieMenuAction:action, any:info, String:buffer[], maxlen)

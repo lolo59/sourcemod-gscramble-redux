@@ -37,6 +37,7 @@ $Copyright: (c) Tf2Tmng 2009-2011$
 #include <sdktools>
 #include <tf2>
 #include <tf2_stocks>
+#include <clientprefs>
 
 #define MINI_CRIT 0
 #define FULL_CRIT 1
@@ -49,10 +50,14 @@ new bool:g_bBlockLog;
 
 new g_iFrags[MAXPLAYERS+1];
 
-#define PL_VERSION "1.0.5"
+#define PL_VERSION "1.0.7"
 
 new Handle:g_hVarTime = INVALID_HANDLE;
 new Handle:g_hVarStats = INVALID_HANDLE;
+new Handle:g_hCookie_ClientMenu = INVALID_HANDLE;
+new g_iTimeLeft;
+
+new g_iMenuSettings[MAXPLAYERS+1];
 
 enum e_RoundState
 {
@@ -93,17 +98,120 @@ public OnPluginStart()
 	HookEvent("player_death", Event_PlayerDeathPre, EventHookMode_Pre);
 	HookEvent("player_death", Event_PlayerDeath, EventHookMode_Post);
 	AddGameLogHook(LogHook);
-	g_hVarTime = CreateConVar("tf2_pregame_timelimit", "60", "time in seconds that pregame lasts", FCVAR_PLUGIN, true, 10.0, false);
+	g_hVarTime = CreateConVar("tf2_pregame_timelimit", "50", "time in seconds that pregame lasts", FCVAR_PLUGIN, true, 10.0, false);
 	g_hVarStats = CreateConVar("tf2_pregame_stats", "1", "Track the number of kills people get during", FCVAR_PLUGIN, true, 0.0, true, 1.0);
+	CreateConVar("sm_pregame_slaughter_version", PL_VERSION, "Version", FCVAR_PLUGIN|FCVAR_SPONLY|FCVAR_REPLICATED|FCVAR_NOTIFY|FCVAR_DONTRECORD);
 	
-	AutoExecConfig();
-	
-	CreateConVar("sm_pregame_slaughter_version", PL_VERSION, _, FCVAR_PLUGIN|FCVAR_SPONLY|FCVAR_REPLICATED|FCVAR_NOTIFY|FCVAR_DONTRECORD);
+	g_hCookie_ClientMenu = RegClientCookie("tf2_pregame_menu", "enables the winners menu on a per-client basis", CookieAccess_Public);
+	SetCookieMenuItem(CookieMenu_Handler, g_hCookie_ClientMenu, "TF2 Pregame");
+	AutoExecConfig();	
+}
+
+public CookieMenu_Handler(client, CookieMenuAction:action, any:info, String:buffer[], maxlen)
+{
+	if (action == CookieMenuAction_DisplayOption)
+	{
+		//don't think we need to do anything
+	}
+	else
+	{
+		new Handle:hMenu = CreateMenu(Menu_CookieSettings);
+		SetMenuTitle(hMenu, "TF2 Pregame Winner Menu (Current Setting)");
+		if (g_iMenuSettings[client] != -1)
+			AddMenuItem(hMenu, "enable", "Enabled/Disable (Enabled)");		
+		else
+			AddMenuItem(hMenu, "enable", "Enabled/Disable (Disabled)");
+		SetMenuExitBackButton(hMenu, true);
+		DisplayMenu(hMenu, client, MENU_TIME_FOREVER);
+	}
+}
+
+public Menu_CookieSettings(Handle:menu, MenuAction:action, param1, param2)
+{
+	new client = param1;
+	if (action == MenuAction_Select) 
+	{
+		new String:sSelection[24];
+		GetMenuItem(menu, param2, sSelection, sizeof(sSelection));
+		if (StrEqual(sSelection, "enable", false))
+		{
+			new Handle:hMenu = CreateMenu(Menu_CookieSettingsEnable);
+			SetMenuTitle(hMenu, "Enable/Disable Winners Menu");
+			
+			if (g_iMenuSettings[client] != -1)
+			{
+				AddMenuItem(hMenu, "enable", "Enable (Set)");
+				AddMenuItem(hMenu, "disable", "Disable");
+			}
+			else
+			{
+				AddMenuItem(hMenu, "enable", "Enabled");
+				AddMenuItem(hMenu, "disable", "Disable (Set)");
+			}
+			
+			SetMenuExitBackButton(hMenu, true);
+			DisplayMenu(hMenu, client, MENU_TIME_FOREVER);
+		}
+	}
+	else if (action == MenuAction_Cancel) 
+	{
+		if (param2 == MenuCancel_ExitBack)
+		{
+			ShowCookieMenu(client);
+		}
+	}
+	else if (action == MenuAction_End)
+	{
+		CloseHandle(menu);
+	}
+}
+
+public Menu_CookieSettingsEnable(Handle:menu, MenuAction:action, param1, param2)
+{
+	new client = param1;
+	if (action == MenuAction_Select) 
+	{
+		new String:sSelection[24];
+		GetMenuItem(menu, param2, sSelection, sizeof(sSelection));
+		if (StrEqual(sSelection, "enable", false))
+		{
+			SetClientCookie(client, g_hCookie_ClientMenu, "1");
+			g_iMenuSettings[client] = 1;
+			PrintToChat(client, "[SM] Pregame winner menu ENABLED");
+		}
+		else
+		{
+			SetClientCookie(client, g_hCookie_ClientMenu, "-1");
+			g_iMenuSettings[client] = -1;
+			PrintToChat(client, "[SM] Pregame winner menu DISABLED");
+		}
+	}
+	else if (action == MenuAction_Cancel) 
+	{
+		if (param2 == MenuCancel_ExitBack)
+		{
+			ShowCookieMenu(client);
+		}
+	}
+	else if (action == MenuAction_End)
+	{
+		CloseHandle(menu);
+	}
 }
 
 public OnConfigsExecuted()
 {
 	SetConVarInt(FindConVar("mp_waitingforplayers_time"), GetConVarInt(g_hVarTime));
+}
+
+public OnClientCookiesCached(client)
+{
+	if (IsClientConnected(client) && !IsFakeClient(client))
+	{
+		decl String:sCookieSetting[3];
+		GetClientCookie(client, g_hCookie_ClientMenu, sCookieSetting, sizeof(sCookieSetting));
+		g_iMenuSettings[client] = StringToInt(sCookieSetting);
+	}
 }
 
 public Action:Event_PlayerDeathPre(Handle:event, const String:name[], bool:dontBroadcast)
@@ -181,31 +289,20 @@ public Event_RoundStart(Handle:event, const String:name[], bool:dontBroadcast)
 
 public Event_PlayerSpawn(Handle:event, const String:name[], bool:dontBroadcast)
 {
-	if (!g_bPreGame)
-		return;
-	
-	CreateTimer(0.2, Timer_Cond, GetEventInt(event, "userid"));
-	return;
+	if (g_bPreGame)
+	{
+		CreateTimer(0.1, Timer_Cond, GetEventInt(event, "userid"));
+	}
 }
 
 public Action:Timer_Cond(Handle:timer, any:userid)
 {
-	if (g_bPreGame)
+	new client = GetClientOfUserId(userid);
+	if (client && IsPlayerAlive(client))
 	{
-		new client = GetClientOfUserId(userid);
-		if (client && IsPlayerAlive(client))
+		if (g_bPreGame)
 		{
-			switch (g_iCrits)
-			{
-				case MINI_CRIT:
-				{
-					TF2_AddCondition(client, TFCond_Buffed, GetConVarFloat(g_hVarTime));
-				}
-				case FULL_CRIT:
-				{
-					TF2_AddCondition(client, TFCond_Kritzkrieged, GetConVarFloat(g_hVarTime));
-				}
-			}
+
 			if (g_iMelee)
 			{
 				RemoveWeapons(client);
@@ -214,7 +311,28 @@ public Action:Timer_Cond(Handle:timer, any:userid)
 			{
 				RemoveFlameMedi(client);
 			}
-			PrintToChat(client, "[SM] Pregame Slaughter is ACTIVE. KILL YOUR TEAMMATES!");
+		}
+		CreateTimer(0.1, Timer_SetCond, GetClientUserId(client));
+	}
+	return Plugin_Handled;
+}
+
+public Action:Timer_SetCond(Handle:timer, any:id)
+{
+	new client = GetClientOfUserId(id);
+	if (g_bPreGame && client && IsPlayerAlive(client))
+	{
+		TF2_AddCondition(client, TFCond:20, GetConVarFloat(g_hVarTime));
+		switch (g_iCrits)
+		{
+			case MINI_CRIT:
+			{
+				TF2_AddCondition(client, TFCond_Buffed, GetConVarFloat(g_hVarTime));
+			}
+			case FULL_CRIT:
+			{
+				TF2_AddCondition(client, TFCond_Kritzkrieged, GetConVarFloat(g_hVarTime));
+			}
 		}
 	}
 	return Plugin_Handled;
@@ -268,6 +386,19 @@ stock StartPreGame()
 	SetConVarBool(FindConVar("tf_avoidteammates"), false);
 	ModifyLockers("disable");
 	RespawnAll();
+	g_iTimeLeft = GetConVarInt(g_hVarTime);
+	CreateTimer(1.0, Timer_CountDown, _, TIMER_REPEAT);
+}
+
+public Action:Timer_CountDown(Handle:timer)
+{
+	g_iTimeLeft--;
+	if (g_iTimeLeft == 0)
+	{
+		return Plugin_Stop;
+	}
+	else
+		return Plugin_Continue;
 }
 
 stock RespawnAll()
@@ -285,6 +416,7 @@ stock StopPreGame()
 {
 	if (g_bPreGame)
 	{
+		CreateTimer(1.0, Timer_RemoveEffects);
 		g_bPreGame = false;
 		SetConVarBool(FindConVar("mp_friendlyfire"), false);
 		SetConVarBool(FindConVar("tf_avoidteammates"), true);
@@ -301,6 +433,19 @@ stock StopPreGame()
 	}
 }
 
+public Action:Timer_RemoveEffects(Handle:timer)
+{
+	for (new i = 1; i <= MaxClients; i++)
+	{
+		if (IsClientInGame(i) && GetClientTeam(i) > 1)
+		{
+			TF2_RemoveCondition(i, TFCond_Buffed);
+			TF2_RemoveCondition(i, TFCond_Kritzkrieged);
+			TF2_RemoveCondition(i, TFCond:20);
+		}
+	}
+}
+			
 public Action:Timer_Winners(Handle:timer)
 {
 	new iRedScores[MaxClients][2],
@@ -354,12 +499,13 @@ public Action:Timer_Winners(Handle:timer)
 		DrawPanelItem(hMenu, "exit");
 		for (new i = 1; i <= MaxClients; i++)
 		{
-			if (IsClientInGame(i) && GetClientTeam(i) > 1 && !IsFakeClient(i))
+			if (IsClientInGame(i) && GetClientTeam(i) > 1 && !IsFakeClient(i) && g_iMenuSettings[i] != -1)
 			{
 				SendPanelToClient(hMenu, i, Panel_Callback, 20);
 			}
 		}
-	}		
+	}
+	return Plugin_Handled;
 }
 
 public Panel_Callback(Handle:menu, MenuAction:action, param1, param2)
