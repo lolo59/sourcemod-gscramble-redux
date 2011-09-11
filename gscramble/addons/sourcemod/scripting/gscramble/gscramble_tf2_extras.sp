@@ -84,9 +84,8 @@ stock bool:TF2_IsClientUberCharged(client)
 
 stock bool:TF2_IsClientUbered(client)
 {
-	new bits = TF2_GetPlayerConditionFlags(client);
 	
-	if (bits & TF_CONDFLAG_UBERCHARGED || bits & TF_CONDFLAG_KRITZKRIEGED || bits & TF_CONDFLAG_UBERCHARGEFADE)
+	if (TF2_IsPlayerInCondition(client, TFCond_Ubercharged) || TF2_IsPlayerInCondition(client, TFCond_Kritzkrieged) || TF2_IsPlayerInCondition(client, TFCond_UberchargeFading))
 		return true;
 	return false;
 }
