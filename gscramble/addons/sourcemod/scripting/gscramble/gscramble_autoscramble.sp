@@ -117,7 +117,7 @@ stock bool:WinStreakCheck(winningTeam)
 	return false;
 }
 
-stock StartScrambleDelay(Float:delay = 5.0, bool:respawn = false, e_ScrambleModes:mode = random)
+stock StartScrambleDelay(Float:delay = 5.0, bool:respawn = false, e_ScrambleModes:mode = invalid)
 {
 	if (g_hScrambleDelay != INVALID_HANDLE)
 	{

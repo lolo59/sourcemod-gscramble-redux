@@ -57,7 +57,7 @@ delete these 2 lines if you want to compile without those thingies.
 #endif
 #define REQUIRE_PLUGIN
 
-#define VERSION "3.0.7"
+#define VERSION "3.0.8"
 #define TEAM_RED 2
 #define TEAM_BLUE 3
 #define SCRAMBLE_SOUND "vo/announcer_am_teamscramble03.wav"
@@ -269,7 +269,7 @@ enum e_Protection
 	none,
 	admin,
 	uberAndBuildings,
-	both,
+	both
 };
 
 enum e_ScrambleModes
@@ -481,21 +481,21 @@ public Action:CMD_Listener(client, const String:command[], argc)
 			}
 			if (IsValidTeam(client))
 			{
-				new String:sArg[9] = "-1";
+				new String:sArg[9];
 				if (argc)
 				{
 					GetCmdArgString(sArg, sizeof(sArg));
 				}
 				if (IsBlocked(client))
 				{
-					if ((StrEqual(sArg, "blue", false) || StrEqual(sArg, "red", false) || StringToInt(sArg) >= 2))
+					if (StrEqual(sArg, "blue", false) || StrEqual(sArg, "red", false) || StringToInt(sArg) >= 2)
 					{
 						if (TeamsUnbalanced(false))
 						{
 						/**
 						allow clients to change teams during imbalances
 						*/
-						return Plugin_Continue;
+							return Plugin_Continue;
 						}
 					}
 					HandleStacker(client);
