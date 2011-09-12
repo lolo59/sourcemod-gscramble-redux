@@ -681,7 +681,6 @@ public APLRes:AskPluginLoad2(Handle:myself, bool:late, String:error[], err_max)
 	CreateNative("TF2_GetRoundTimeLeft", TF2_GetRoundTimeLeft);
 	MarkNativeAsOptional("HLXCE_GetPlayerData");
 	MarkNativeAsOptional("QueryGameMEStats");
-	MarkNativeAsOptional("TF2_IsPlayerInDuel");
 	MarkNativeAsOptional("RegClientCookie");
 	MarkNativeAsOptional("SetClientCookie");
 	MarkNativeAsOptional("GetClientCookie");
@@ -2205,7 +2204,7 @@ bool:IsValidTarget(client, e_ImmunityModes:mode)
 
 	if ((mode == scramble && GetConVarBool(cvar_ScrambleDuelImmunity)) || mode == balance)
 	{
-		if (GetFeatureStatus(FeatureType_Native, "TF2_IsPlayerInDuel") == FeatureStatus_Available	&& TF2_IsPlayerInDuel(client))
+		if (TF2_IsPlayerInDuel(client))
 		{
 			return false;
 		}
@@ -2424,7 +2423,7 @@ stock GetPlayerPriority(client)
 {
 	if (IsFakeClient(client))
 		return 0;
-	if ((GetFeatureStatus(FeatureType_Native, "TF2_IsPlayerInDuel") == FeatureStatus_Available) && TF2_IsPlayerInDuel(client))
+	if (TF2_IsPlayerInDuel(client))
 	{
 		return -10;
 	}
