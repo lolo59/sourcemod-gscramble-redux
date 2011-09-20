@@ -35,14 +35,16 @@ $Copyright: (c) Tf2Tmng 2009-2011$
 
 stock bool:ScrambleCheck()
 {
-	if (!g_iLastRoundWinningTeam)
-	{
-		return false;
-	}
 	if (g_bScrambleNextRound)
 	{
 		return true;
 	}
+	
+	if (!g_iLastRoundWinningTeam)
+	{
+		return false;
+	}
+
 	new bool:bOkayToCheck = false;
 	if (g_iVoters >= GetConVarInt(cvar_MinAutoPlayers))
 	{
