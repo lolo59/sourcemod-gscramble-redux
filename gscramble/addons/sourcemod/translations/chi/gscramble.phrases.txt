@@ -6,7 +6,6 @@
 	}
 	"VoteAd"
 	{
-		"#format"		"{1:s}"
 		"chi"			"聊天窗输入 '{1}' 启动随机组队."
 	}
 	"YourBuddyLeft"
@@ -27,17 +26,14 @@
 	}
 	"AddedBuddy"
 	{
-		"#format"		"{1:s}"
 		"chi"			"{1} 现在是你的搭档了"
 	}
 	"SomeoneAddedYou"
 	{
-		"#format"		"{1:s}"
 		"chi"			"{1} 将你设置为他的搭档!"
 	}
 	"ChoseANewBuddy"
 	{
-		"#format"		"{1:s}"
 		"chi"			"你的老搭档 {1} 选择了一个新搭档"
 	}
 	"AlreadyHasABuddy"
@@ -54,17 +50,14 @@
 	}
 	"FlagBalance"
 	{
-		"#format"		"{1:i}"
 		"chi"			"不平衡检测.可能在 {1} 秒后采取行动."
 	}
 	"RestoreInnocentTeam"
 	{
-		"#format"	"{1:s}"
 		"chi"		"{s} 已被强制返回这个队伍,你想返回因为上次自动平衡而被移出的队伍吗?"
 	}
 	"RejoinMessage"
 	{
-		"#format" 	"{1:s}"
 		"chi"		"在一些玩家被强制返回自己原本的队伍之后,{1} 选择了重新返回他原来的队伍"
 	}
 	"OverrideUnCheck"
@@ -97,7 +90,6 @@
 	}
 	"NoCapMessage"
 	{
-		"#format"	"{1:s}"
 		"chi"		"{1} 队上回合没有控制据点."
 	}	
 	"CancelScramble"
@@ -114,7 +106,6 @@
 	}
 	"WinTime"
 	{
-		"#format"	"{1:i},{2:i}"
 		"chi"		"获胜的队伍只使用了{1}分:{2}秒."
 	}
 	"FragDetection"
@@ -131,7 +122,6 @@
 	}
 	"VoteRoundTimeReply"
 	{
-		"#format"	"{1:i}"
 		"chi"		"当回合还有 {1} 秒时最终投票结果才能生效"
 	}
 	"TeamRestore"
@@ -148,17 +138,14 @@
 	}
 	"ShameMessage"
 	{
-		"#format"	"{1:s}"
 		"chi"		"{1} 因为失败,尝试重建队伍!"
 	}
 	"TeamChangedAll"
 	{
-		"#format"	"{1:s},{2:s}"
 		"chi"		"{1} 被移动到 {2} 来平衡队伍."
 	}
 	"VoteTallied"
 	{
-		"#format"	"{1:s},{2:i},{3:i}"
 		"chi"		"{1} 投票要求随机平衡队伍.票数需求 {2}/{3}."
 	}
 	"ScrambleRound"
@@ -176,17 +163,14 @@
 	}
 	"VoteFailed"
 	{
-		"#format"	"{1:i},{2:i}"
 		"chi"		"投票失败: {2} 个玩家中的百分之 {1} 反对随机平衡投票."
 	}
 	"VoteWin"
 	{
-		"#format"	"{1:i},{2:i}"
 		"chi"		"{2} 个玩家中的百分之 {1} 支持随机平衡投票."
 	}
 	"NotEnoughVotes"
 	{
-		"#format"	"{1:i}"
 		"chi"		"因为没有足够的票数,投票随机组队失败. 只有 {1}%% 支持"
 	}
 	"MapEnding"
@@ -216,12 +200,10 @@
 	}
 	"ScrambleDelay"
 	{
-		"#format"	"{1:i}"
 		"chi"		"队伍将在 {1} 秒后随机分配."
 	}
 	"ResetReply"
 	{
-		"#format"	"{1:i}"
 		"chi"		"重置 {1} 票."
 	}
 	"NoScrambleReply"
@@ -266,7 +248,6 @@
 	}
 	"StatsMessage"
 	{
-		"#format"	"{1:i},{2:i},{3:s}"
 		"chi"		"在 {2} 玩家中随即交换 {1} 人. {3}%"
 	}
 }
