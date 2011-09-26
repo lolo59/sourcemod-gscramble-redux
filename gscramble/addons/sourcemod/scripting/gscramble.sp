@@ -873,14 +873,12 @@ public OnConfigsExecuted()
 	}
 	if (!GetConVarBool(cvar_MenuIntegrate))
 	{
-		if (g_hAdminMenu != INVALID_HANDLE)
+		if (g_hAdminMenu != INVALID_HANDLE && g_Category != INVALID_TOPMENUOBJECT)
 		{
-			new TopMenuObject:ID = FindTopMenuCategory(g_hAdminMenu, "gScramble");
-			if (ID != INVALID_TOPMENUOBJECT)
-			{
-				RemoveFromTopMenu(g_hAdminMenu, ID);
-				g_hAdminMenu = INVALID_HANDLE;
-			}
+			
+			RemoveFromTopMenu(g_hAdminMenu, g_Category);
+			g_hAdminMenu = INVALID_HANDLE;
+			g_Category = INVALID_TOPMENUOBJECT;
 		}
 	}
 	if (g_hVoteAdTimer != INVALID_HANDLE)

@@ -33,6 +33,9 @@ $Copyright: (c) Tf2Tmng 2009-2011$
 *************************************************************************
 */
 
+new TopMenuObject:g_Category = INVALID_TOPMENUOBJECT;
+
+
 public OnAdminMenuReady(Handle:topmenu)
 {
 	if (!GetConVarBool(cvar_MenuIntegrate))
@@ -40,12 +43,13 @@ public OnAdminMenuReady(Handle:topmenu)
 	
 	if (topmenu == g_hAdminMenu)
 		return;
+	g_Category = INVALID_TOPMENUOBJECT; 
 	g_hAdminMenu = topmenu;
 	new TopMenuObject:menu_category = FindTopMenuCategory(topmenu, ADMINMENU_SERVERCOMMANDS);
 	
 	if (menu_category != INVALID_TOPMENUOBJECT)
 	{
-		AddToTopMenu(g_hAdminMenu, "gScramble", TopMenuObject_Item, Handle_Category, menu_category);
+		g_Category = AddToTopMenu(g_hAdminMenu, "gScramble", TopMenuObject_Item, Handle_Category, menu_category);
 	}
 }
 
