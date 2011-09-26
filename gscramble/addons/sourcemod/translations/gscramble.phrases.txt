@@ -196,8 +196,7 @@
 	"RedStreak"
 	{
 		"en"		"Red team reached the win-streak scramble trigger."
-	}
-	
+	}	
 	"BluStreak"
 	{
 		"en"		"Blu team reached the win-streak scramble trigger."

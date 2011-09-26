@@ -879,6 +879,7 @@ public OnConfigsExecuted()
 			if (ID != INVALID_TOPMENUOBJECT)
 			{
 				RemoveFromTopMenu(g_hAdminMenu, ID);
+				g_hAdminMenu = INVALID_HANDLE;
 			}
 		}
 	}

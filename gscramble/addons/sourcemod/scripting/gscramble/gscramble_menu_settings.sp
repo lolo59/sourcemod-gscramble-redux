@@ -35,6 +35,9 @@ $Copyright: (c) Tf2Tmng 2009-2011$
 
 public OnAdminMenuReady(Handle:topmenu)
 {
+	if (!GetConVarBool(cvar_MenuIntegrate))
+		return;
+	
 	if (topmenu == g_hAdminMenu)
 		return;
 	g_hAdminMenu = topmenu;
