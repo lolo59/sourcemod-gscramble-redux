@@ -2007,10 +2007,8 @@ SwapPreferences()
 
 public Event_RoundStart(Handle:event, const String:name[], bool:dontBroadcast)
 {
-	if (g_bTeamsLocked)
-	{
-		g_bTeamsLocked = false;
-	}
+	
+	g_bTeamsLocked = false;
 	g_bNoSpec = false;
 	/**
 	check to see if the previos round warrented a trigger
