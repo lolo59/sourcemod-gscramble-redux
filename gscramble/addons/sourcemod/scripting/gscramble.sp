@@ -507,9 +507,9 @@ public Action:CMD_Listener(client, const String:command[], argc)
 						*/
 							return Plugin_Continue;
 						}
-						HandleStacker(client);
-						return Plugin_Handled;
 					}
+					HandleStacker(client);
+					return Plugin_Handled;
 					
 				}				
 				
@@ -517,7 +517,7 @@ public Action:CMD_Listener(client, const String:command[], argc)
 				{
 					if (GetConVarBool(cvar_ImbalancePrevent))
 					{
-						if (CheckSpecChange(client))
+						if (CheckSpecChange(client) || IsBlocked(client))
 						{
 							HandleStacker(client);
 							return Plugin_Handled;
