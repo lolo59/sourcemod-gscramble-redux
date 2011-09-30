@@ -586,59 +586,67 @@ stock ForceSpecToTeam()
 
 Float:GetClientScrambleScore(client, e_ScrambleModes:mode)
 {
-	if (mode == score)
+	switch (mode)
 	{
-		return float(TF2_GetPlayerResourceData(client, TFResource_TotalScore));
+		case score:
+		{
+
+			return float(TF2_GetPlayerResourceData(client, TFResource_TotalScore));
+		}
+		case kdRatio:		
+		{
+			return FloatDiv(float(g_aPlayers[client][iFrags]), float(g_aPlayers[client][iDeaths]));
+		}
+		case gameMe_Rank:
+		{		
+			return float(g_aPlayers[client][iGameMe_Rank]);
+		}
+		case gameMe_Skill:
+		{
+			return float(g_aPlayers[client][iGameMe_Skill]);
+		}
+		case gameMe_gRank:
+		{
+			return float(g_aPlayers[client][iGameMe_gRank]);
+		}
+		case gameMe_gSkill:
+		{
+			return float(g_aPlayers[client][iGameMe_gSkill]);
+		}
+		case gameMe_SkillChange:
+		{
+			return FloatDiv(float(g_aPlayers[client][iGameMe_SkillChange]), GetClientTime(client));
+		}
+		case hlxCe_Rank:
+		{
+			return float(g_aPlayers[client][iHlxCe_Rank]);
+		}
+		case hlxCe_Skill:
+		{
+			return float(g_aPlayers[client][iHlxCe_Skill]);
+		}
+		case playerClass:
+		{
+			return float(_:TF2_GetPlayerClass(client));
+		}
+		default:
+		{
+			new Float:fScore = float(TF2_GetPlayerResourceData(client, TFResource_TotalScore));
+			fScore = FloatMul(fScore, fScore);
+			if (!IsFakeClient(client))
+			{
+				new Float:fClientTime = GetClientTime(client);
+				new Float:fTime = FloatDiv(fClientTime, 60.0);
+				fScore = FloatDiv(fScore, fTime);
+			}
+			else
+			{
+				fScore = GetRandomFloat(0.0, 1.0);
+			}
+			return fScore;
+		}
 	}
-	if (mode == kdRatio)
-	{
-		return FloatDiv(float(g_aPlayers[client][iFrags]), float(g_aPlayers[client][iDeaths]));
-	}
-	if (mode == gameMe_Rank)
-	{
-		return float(g_aPlayers[client][iGameMe_Rank]);
-	}
-	if (mode == gameMe_Skill)
-	{
-		return float(g_aPlayers[client][iGameMe_Skill]);
-	}
-	if (mode == gameMe_gRank)
-	{
-		return float(g_aPlayers[client][iGameMe_gRank]);
-	}
-	if (mode == gameMe_gSkill)
-	{
-		return float(g_aPlayers[client][iGameMe_gSkill]);
-	}
-	if (mode == gameMe_SkillChange)
-	{
-		return FloatDiv(float(g_aPlayers[client][iGameMe_SkillChange]), GetClientTime(client));
-	}
-	if (mode == hlxCe_Rank)
-	{
-		return float(g_aPlayers[client][iHlxCe_Rank]);
-	}
-	if (mode == hlxCe_Skill)
-	{
-		return float(g_aPlayers[client][iHlxCe_Skill]);
-	}
-	if (mode == playerClass)
-	{
-		return float(_:TF2_GetPlayerClass(client));
-	}
-	new Float:fScore = float(TF2_GetPlayerResourceData(client, TFResource_TotalScore));
-	fScore = FloatMul(fScore, fScore);
-	if (!IsFakeClient(client))
-	{
-		new Float:fClientTime = GetClientTime(client);
-		new Float:fTime = FloatDiv(fClientTime, 60.0);
-		fScore = FloatDiv(fScore, fTime);
-	}
-	else
-	{
-		fScore = GetRandomFloat(0.0, 1.0);
-	}
-	return fScore;	
+	return 0.0;
 }
 
 /**
@@ -691,7 +699,7 @@ stock ScramblePlayers(e_ScrambleModes:scrambleMode)
 	handle imbalance in imune teams
 	find out which team has more immune members than the other
 	*/
-	if (iRedImmune != iBluImmune)
+	if ((iBluImmune || iRedImmune) && iRedImmune != iBluImmune)
 	{
 		if ((iImmuneDiff = (iRedImmune - iBluImmune)) > 0)
 		{
@@ -715,13 +723,29 @@ stock ScramblePlayers(e_ScrambleModes:scrambleMode)
 		{
 			scoreArray[i][0] = float(iValidPlayers[i]);
 			scoreArray[i][1] = GetClientScrambleScore(iValidPlayers[i], scrambleMode);
-		}		
+		}
+#if defined DEBUG
+		// print the array bore and after sorting
+		for (i = 0; i < iCount; i++)
+		{
+			LogToFile("gscramble.debug.txt", "%f %f", scoreArray[i][0], scoreArray[i][1]);
+		}
+		LogToFile("gscramble.debug.txt", "---------------------------");
+#endif
 		
 		/** 
 		now sort score descending 
 		and copy the array into the integer one
 		*/
 		SortCustom2D(_:scoreArray, iCount, SortScoreAsc);
+#if defined DEBUG
+		// print the array bore and after sorting
+		for (i = 0; i < iCount; i++)
+		{
+			LogToFile("gscramble.debug.txt", "%f %f", scoreArray[i][0], scoreArray[i][1]);
+		}
+		LogToFile("gscramble.debug.txt", "---------------------------");
+#endif
 		for (i = 0; i < iCount; i++)
 		{
 			iValidPlayers[i] = RoundFloat(scoreArray[i][0]);

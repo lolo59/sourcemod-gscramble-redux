@@ -37,6 +37,9 @@ $Copyright: (c) Tf2Tmng 2009-2011$
 #include <tf2>
 #include <tf2_stocks>
 
+// comment out to disable debuggin
+//#define DEBUG
+
 #undef REQUIRE_EXTENSIONS
 #include <clientprefs>
 #define REQUIRE_EXTENSIONS
@@ -57,7 +60,7 @@ delete these 2 lines if you want to compile without those thingies.
 #endif
 #define REQUIRE_PLUGIN
 
-#define VERSION "3.0.9"
+#define VERSION "3.1.0"
 #define TEAM_RED 2
 #define TEAM_BLUE 3
 #define SCRAMBLE_SOUND "vo/announcer_am_teamscramble03.wav"
@@ -472,7 +475,7 @@ public Action:CMD_Listener(client, const String:command[], argc)
 						return Plugin_Continue;
 					}
 				}
-				if (GetClientTeam(client) != 1)
+				if (GetClientTeam(client) >= 2)
 				{
 					PrintToChat(client, "\x01\x04[SM]\x01 %t", "BlockJointeam");
 					LogAction(-1, client, "\"%L\" is being blocked from using the %s command due to setting", client, command);
@@ -497,9 +500,10 @@ public Action:CMD_Listener(client, const String:command[], argc)
 						*/
 							return Plugin_Continue;
 						}
+						HandleStacker(client);
+						return Plugin_Handled;
 					}
-					HandleStacker(client);
-					return Plugin_Handled;
+					
 				}				
 				
 				if (StrEqual(command, "spectate", false) || StringToInt(sArg) < 2 || StrContains(sArg, "spec", false) != -1)
