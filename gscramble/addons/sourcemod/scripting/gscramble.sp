@@ -475,6 +475,13 @@ public Action:CMD_Listener(client, const String:command[], argc)
 						return Plugin_Continue;
 					}
 				}
+				if (TeamsUnbalanced(false))
+				{
+				/**
+				allow clients to change teams during imbalances
+				*/
+					return Plugin_Continue;
+				}
 				if (GetClientTeam(client) >= 2)
 				{
 					PrintToChat(client, "\x01\x04[SM]\x01 %t", "BlockJointeam");
