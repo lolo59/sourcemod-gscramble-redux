@@ -682,6 +682,9 @@ stock ScramblePlayers(e_ScrambleModes:scrambleMode)
 			}
 			else
 			{
+#if defined DEBUG
+				LogToFile("gscramble.debug.txt", "Found a scramble immune person");
+#endif
 				if (GetClientTeam(i) == TEAM_RED)
 					iRedImmune++;
 				if (GetClientTeam(i) == TEAM_BLUE)
@@ -739,7 +742,7 @@ stock ScramblePlayers(e_ScrambleModes:scrambleMode)
 		now sort score descending 
 		and copy the array into the integer one
 		*/
-		SortCustom2D(_:scoreArray, iCount, SortScoreDesc);
+		SortCustom2D(_:scoreArray, iCount, SortScoreAsc);
 #if defined DEBUG
 		// print the array bore and after sorting
 		for (i = 0; i < iCount; i++)

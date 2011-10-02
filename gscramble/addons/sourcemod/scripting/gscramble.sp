@@ -38,7 +38,7 @@ $Copyright: (c) Tf2Tmng 2009-2011$
 #include <tf2_stocks>
 
 // comment out to disable debuggin
-#define DEBUG
+//#define DEBUG
 
 #undef REQUIRE_EXTENSIONS
 #include <clientprefs>
@@ -60,7 +60,7 @@ comment these 2 lines if you want to compile without those thingies.
 #endif
 #define REQUIRE_PLUGIN
 
-#define VERSION "3.0.10"
+#define VERSION "3.0.11"
 #define TEAM_RED 2
 #define TEAM_BLUE 3
 #define SCRAMBLE_SOUND "vo/announcer_am_teamscramble03.wav"
@@ -2264,7 +2264,7 @@ bool:IsValidTarget(client, e_ImmunityModes:mode)
 	
 	if (IsClientInGame(client) && IsValidTeam(client))
 	{
-		if (GetConVarInt(cvar_TopProtect) && !IsNotTopPlayer(client, GetClientTeam(client)))
+		if (mode == balance && GetConVarInt(cvar_TopProtect) && !IsNotTopPlayer(client, GetClientTeam(client)))
 		{
 			return false;
 		}
