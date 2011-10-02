@@ -38,14 +38,14 @@ $Copyright: (c) Tf2Tmng 2009-2011$
 #include <tf2_stocks>
 
 // comment out to disable debuggin
-//#define DEBUG
+#define DEBUG
 
 #undef REQUIRE_EXTENSIONS
 #include <clientprefs>
 #define REQUIRE_EXTENSIONS
 
 /**
-delete these 2 lines if you want to compile without those thingies.
+comment these 2 lines if you want to compile without those thingies.
 */
 #define GAMEME_INCLUDED
 #define HLXCE_INCLUDED

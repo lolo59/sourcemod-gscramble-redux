@@ -590,7 +590,9 @@ Float:GetClientScrambleScore(client, e_ScrambleModes:mode)
 	{
 		case score:
 		{
-
+#if defined DEBUG
+	LogToFile("gscramble.debug.txt", "GRABBING TOTAL SCORE");
+#endif
 			return float(TF2_GetPlayerResourceData(client, TFResource_TotalScore));
 		}
 		case kdRatio:		
@@ -737,14 +739,14 @@ stock ScramblePlayers(e_ScrambleModes:scrambleMode)
 		now sort score descending 
 		and copy the array into the integer one
 		*/
-		SortCustom2D(_:scoreArray, iCount, SortScoreAsc);
+		SortCustom2D(_:scoreArray, iCount, SortScoreDesc);
 #if defined DEBUG
 		// print the array bore and after sorting
 		for (i = 0; i < iCount; i++)
 		{
 			LogToFile("gscramble.debug.txt", "%f %f", scoreArray[i][0], scoreArray[i][1]);
 		}
-		LogToFile("gscramble.debug.txt", "---------------------------");
+		LogToFile("gscramble.debug.txt", "---------------------------\nEND\n");
 #endif
 		for (i = 0; i < iCount; i++)
 		{
@@ -773,9 +775,11 @@ stock ScramblePlayers(e_ScrambleModes:scrambleMode)
 		return;
 	}
 	g_bBlockDeath = true;
-	new iTemp = iSwaps;
-	iImmuneTeam == TEAM_RED ? (bToRed = false):(bToRed = true);
-	for (i = iTemp; i < iCount; i++)
+	if (iImmuneTeam)
+	{
+		iImmuneTeam == TEAM_RED ? (bToRed = false):(bToRed = true);
+	}
+	for (i = 0; i < iCount; i++)
 	{
 		client = iValidPlayers[i];
 		iTempTeam = GetClientTeam(client);
@@ -792,7 +796,10 @@ stock ScramblePlayers(e_ScrambleModes:scrambleMode)
 		if (GetClientTeam(client) != iTempTeam)
 		{
 			iSwaps++;
-			PrintCenterText(client, "%t", "TeamChangedOne");
+			if (!IsFakeClient(client))
+			{
+				PrintCenterText(client, "%t", "TeamChangedOne");
+			}
 		}
 		if (iTempTeam == 1)
 		{
