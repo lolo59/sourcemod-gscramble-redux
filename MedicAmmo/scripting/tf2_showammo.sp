@@ -1,8 +1,8 @@
 /************************************************************************
 *************************************************************************
-Tf2 Show Ammo
+Tf2 Show Ammow
 Description:
-	Shows medics how much ammo the person they are healing has
+	Shows medics how mucha ammo the person they are healing has
 *************************************************************************
 *************************************************************************
 
@@ -32,7 +32,7 @@ $Copyright: (c) Tf2Tmng 2009-2011$
 *************************************************************************
 *************************************************************************
 */
-#define PL_VERSION "1.0.7"
+#define PL_VERSION "1.0.8"
 #pragma semicolon 1
 #include <sourcemod>
 #include <tf2>
@@ -149,7 +149,6 @@ public Action:Timer_GetMaxAmmo(Handle:timer, any:userid)
 		g_aClientSettings[client][iMaxClip1] = TF2_WeaponClip(TF2_GetSlotWeapon(client, 0));
 		g_aClientSettings[client][iMaxClip2] = TF2_WeaponClip(TF2_GetSlotWeapon(client, 1));
 	}
-	return Plugin_Handled;
 }
 
 public AmmoCookieSettings(client, CookieMenuAction:action, any:info, String:buffer[], maxlen)
@@ -635,33 +634,26 @@ stock ShowInfo(medic, target)
 			iColorSetting = COLOR_BLUE;
 		}
 	}
+	if (iClip1 == -1)
+	{
+		 iAmmo1 = TF2_GetSlotAmmo(target, 0);
+		 if (iAmmo1 != -1) Format(sMessage, sizeof(sMessage), "Primary Ammo: %i ", iAmmo1);
+	}
+	else Format(sMessage, sizeof(sMessage), "Primary Ammo: %i / %i ", iClip1, g_aClientSettings[target][iMaxClip1]);
+	 
 	class = TF2_GetPlayerClass(target);
-	if (class == TFClass_Pyro || class == TFClass_Heavy)
+	switch(class)
 	{
-		iAmmo1 = GetHeavyPyroAmmo(target);
-		Format(sMessage, sizeof(sMessage), "Primary Ammo: %i ", iAmmo1);
-	}
-	else if (iClip1 == -1)
-	{
-		iAmmo1 = TF2_GetSlotAmmo(target, 0);
-		if (iAmmo1 != -1)
-		{
-			Format(sMessage, sizeof(sMessage), "Primary Ammo: %i ", iAmmo1);
-		}
-	}
-	if (iClip1 != -1)
-	{
-		Format(sMessage, sizeof(sMessage), "Primary Ammo: %i / %i ", iClip1, g_aClientSettings[target][iMaxClip1]);
-	}
-
-	if (class == TFClass_DemoMan)
-	{
-
-		if (iClip2 != -1 && class != TFClass_Medic)
-		{
-			Format(sMessage, sizeof(sMessage), "%sSecondary Ammo: %i / %i ", sMessage, iClip2, g_aClientSettings[target][iMaxClip2]);
-		}
-	}
+		 case TFClass_Pyro, TFClass_Heavy, TFClass_Sniper:
+		 {
+			  iAmmo1 = GetHeavyPyroAmmo(target);
+			  Format(sMessage, sizeof(sMessage), "Primary Ammo: %i ", iAmmo1);
+		 }
+		 case TFClass_DemoMan:
+		 {
+			  if (iClip2 != -1) Format(sMessage, sizeof(sMessage), "%sSecondary Ammo: %i / %i ", sMessage, iClip2, g_aClientSettings[target][iMaxClip2]);
+		 }
+	}  
 	SetHudTextParams(g_fTextPositions[iPos][0], g_fTextPositions[iPos][1], GetConVarFloat(g_hVarUpdateSpeed), g_iColors[iColorSetting][0], g_iColors[iColorSetting][1], g_iColors[iColorSetting][2], 255);
 	ShowSyncHudText(medic, h_HudMessage, sMessage);
 }
