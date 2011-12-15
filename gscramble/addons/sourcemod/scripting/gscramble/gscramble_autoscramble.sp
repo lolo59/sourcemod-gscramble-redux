@@ -617,7 +617,10 @@ Float:GetClientScrambleScore(client, e_ScrambleModes:mode)
 		}
 		case gameMe_SkillChange:
 		{
-			return FloatDiv(float(g_aPlayers[client][iGameMe_SkillChange]), GetClientTime(client));
+			if (!IsFakeClient(client))
+			{
+				return FloatDiv(float(g_aPlayers[client][iGameMe_SkillChange]), GetClientTime(client));
+			}
 		}
 		case hlxCe_Rank:
 		{
