@@ -1,7 +1,7 @@
 /**
  * gameME Plugin
  * http://www.gameme.com
- * Copyright (C) 2007-2011 TTS Oetzel & Goerz GmbH
+ * Copyright (C) 2007-2013 TTS Oetzel & Goerz GmbH
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -39,14 +39,13 @@
 #define RAW_MESSAGE_CALLBACK_NEXT		103
 
 
-forward onGameMEStatsRank(command, client, const String: message_prefix[], const total_cell_values[], const Float: total_float_values[], const session_cell_values[], const Float: session_float_values[], const String: session_fav_weapon[], const global_cell_values[], const Float: global_float_values[], const String: country_code[]);
-forward onGameMEStatsPublicCommand(command, client, const String: message_prefix[], const total_cell_values[], const Float: total_float_values[], const session_cell_values[], const Float: session_float_values[], const String: session_fav_weapon[], const global_cell_values[], const Float: global_float_values[], const String: country_code[]);
-forward onGameMEStatsTop10(command, client, const String: message_prefix[], const top10_cell_values[], const Float: top10_float_values[], const String: player1[], const String: player2[], const String: player3[], const String: player4[], const String: player5[], const String: player6[], const String: player7[], const String: player8[], const String: player9[], const String: player10[]);
-forward onGameMEStatsNext(command, client, const String: message_prefix[], const next_cell_values[], const Float: next_float_values[], const String: player1[], const String: player2[], const String: player3[], const String: player4[], const String: player5[], const String: player6[], const String: player7[], const String: player8[], const String: player9[], const String: player10[]);
+forward onGameMEStatsRank(command, client, String: message_prefix[], &Handle: datapack);
+forward onGameMEStatsPublicCommand(command, client, String: message_prefix[], &Handle: datapack);
+forward onGameMEStatsTop10(command, client, String: message_prefix[], &Handle: datapack);
+forward onGameMEStatsNext(command, client, String: message_prefix[], &Handle: datapack);
 
 
-functag gameMEStatsCallback public(command, payload, client, const total_cell_values[], const Float: total_float_values[], const session_cell_values[], const Float: session_float_values[], const String: session_fav_weapon[], const global_cell_values[], const Float: global_float_values[], const String: country_code[]);
-
+functag gameMEStatsCallback public(command, payload, client, &Handle: datapack);
 /**
  * Query gameME Stats data from a client
  * 
@@ -59,7 +58,7 @@ functag gameMEStatsCallback public(command, payload, client, const total_cell_va
 native QueryGameMEStats(String: request[], client, gameMEStatsCallback: callback, payload = 0);
 
 
-functag gameMEStatsTop10Callback public(command, payload, const top10_cell_values[], const Float: top10_float_values[], const String: player1[], const String: player2[], const String: player3[], const String: player4[], const String: player5[], const String: player6[], const String: player7[], const String: player8[], const String: player9[], const String: player10[]);
+functag gameMEStatsTop10Callback public(command, payload, &Handle: datapack);
 
 /**
  * Query Top10 players from gameME Stats
@@ -73,7 +72,7 @@ functag gameMEStatsTop10Callback public(command, payload, const top10_cell_value
 native QueryGameMEStatsTop10(String: request[], client, gameMEStatsTop10Callback: callback, payload = 0);
 
 
-functag gameMEStatsNextCallback public(command, payload, client, const next_cell_values[], const Float: next_float_values[], const String: player1[], const String: player2[], const String: player3[], const String: player4[], const String: player5[], const String: player6[], const String: player7[], const String: player8[], const String: player9[], const String: player10[]);
+functag gameMEStatsNextCallback public(command, payload, client, &Handle: datapack);
 
 /**
  * Query next players from gameME Stats for s specified client
@@ -114,15 +113,14 @@ native DisplayGameMEStatsMenu(client, time, String: message[], need_handler);
 
 
 /**
- * Color all player names in a string
+ * Color gameME entitites
  *
- * @param message	String with player names.
- * @return        	The color index for the message
+ * @param message	String.
  */
-native gameMEStatsColorAllPlayers(String: message[]); 
+native gameMEStatsColorEntities(String: message[]); 
 
 
-public SharedPlugin:__gameme = 
+public SharedPlugin:__pl_gameme = 
 {
 	name = "gameme",
 	file = "gameme.smx",
@@ -131,4 +129,18 @@ public SharedPlugin:__gameme =
 #else
 	required = 0,
 #endif
+
+
+#if !defined REQUIRE_PLUGIN
+public __pl_gameme_SetNTVOptional()
+{
+	MarkNativeAsOptional("QueryGameMEStats");
+	MarkNativeAsOptional("QueryGameMEStatsTop10");
+	MarkNativeAsOptional("QueryGameMEStatsNext");
+	MarkNativeAsOptional("QueryIntGameMEStats");
+	MarkNativeAsOptional("DisplayGameMEStatsMenu");
+	MarkNativeAsOptional("gameMEStatsColorEntities");
+}
+#endif
+
 };

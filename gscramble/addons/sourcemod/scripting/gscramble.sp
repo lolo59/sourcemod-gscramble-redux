@@ -60,7 +60,7 @@ comment these 2 lines if you want to compile without those thingies.
 #endif
 #define REQUIRE_PLUGIN
 
-#define VERSION "3.0.12"
+#define VERSION "3.0.13"
 #define TEAM_RED 2
 #define TEAM_BLUE 3
 #define SCRAMBLE_SOUND "vo/announcer_am_teamscramble03.wav"
@@ -1265,18 +1265,21 @@ public OnClientPutInServer(client)
 #endif
 
 #if defined GAMEME_INCLUDED
-public QuerygameMEStatsCallback(command, payload, client, const total_cell_values[], const Float: total_float_values[], 
-		const session_cell_values[], const Float: session_float_values[],
-		const String: session_fav_weapon[], const global_cell_values[],
-		const Float: global_float_values[], const String: country_code[])
+public QuerygameMEStatsCallback(command, payload, client, &Handle: datapack)
 {
 	if ((client > 0) && (command == RAW_MESSAGE_CALLBACK_PLAYER))
 	{
-		g_aPlayers[client][iGameMe_Rank] = total_cell_values[0];
-		g_aPlayers[client][iGameMe_Skill] = total_cell_values[2];
-		g_aPlayers[client][iGameMe_gRank] = global_cell_values[0];
-		g_aPlayers[client][iGameMe_gSkill] = global_cell_values[2];
-		g_aPlayers[client][iGameMe_SkillChange] = session_cell_values[1];
+		new Handle: data = CloneHandle(datapack);
+		ResetPack(data);
+		g_aPlayers[client][iGameMe_Rank] = ReadPackCell(data);
+		SetPackPosition(data, GetPackPosition(data)+1);
+		g_aPlayers[client][iGameMe_Skill] = ReadPackCell(data);
+		SetPackPosition(data, GetPackPosition(data)+28);
+		g_aPlayers[client][iGameMe_gRank] = ReadPackCell(data);
+		SetPackPosition(data, GetPackPosition(data)+1);
+		g_aPlayers[client][iGameMe_gSkill] = ReadPackCell(data);
+		SetPackPosition(data, GetPackPosition(data) -16);
+		g_aPlayers[client][iGameMe_SkillChange] = ReadPackCell(data);
 	}
 }
 #endif
