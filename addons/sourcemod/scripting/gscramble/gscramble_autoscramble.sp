@@ -664,7 +664,7 @@ stock ForceSpecToTeam()
 Float:GetClientScrambleScore(client, e_ScrambleModes:mode)
 {
 	new entity = GetPlayerResourceEntity(); 
-	new Totalscore = GetEntProp(entity, Prop_Send, "m_iScore", client);
+	new Totalscore = GetEntProp(entity, Prop_Send, "m_iScore", _, client);  
 	
 	switch (mode)
 	{

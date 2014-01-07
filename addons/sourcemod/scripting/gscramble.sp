@@ -421,7 +421,7 @@ public OnPluginStart()
 	LoadTranslations("common.phrases");
 	LoadTranslations("gscramble.phrases");
 		
-	CheckEstensions();	
+	CheckExtensions();	
 		
 	g_iVoters = GetClientCount(false);
 	g_iVotesNeeded = RoundToFloor(float(g_iVoters) * GetConVarFloat(cvar_PublicNeeded));
@@ -543,7 +543,7 @@ public Action:CMD_Listener(client, const String:command[], argc)
 	return Plugin_Continue;
 }
 
-CheckEstensions()
+CheckExtensions()
 {
 	new String:sMod[14];
 	GetGameFolderName(sMod, 14);
@@ -601,6 +601,7 @@ public Action:cmd_AddBuddy(client, args)
 	if (!g_bUseBuddySystem)
 	{
 		ReplyToCommand(client, "\x01\x04[SM]\x01 %t", "BuddyDisabledError");
+		
 		return Plugin_Handled;
 	}
 	if (args == 1)
@@ -630,6 +631,7 @@ public Action:cmd_AddBuddy(client, args)
 	{
 		ReplyToCommand(client, "\x01\x04[SM]\x01 %t", "BuddyArgError");
 	}
+	
 	return Plugin_Handled;
 }
 
@@ -637,6 +639,7 @@ public Action:cmd_Preference(client, args)
 {
 	if (!g_bHooked)
 	{
+	
 		ReplyToCommand(client, "\x01\x04[SM]\x01 %t", "EnableReply");
 		return Plugin_Handled;
 	}	
@@ -644,6 +647,7 @@ public Action:cmd_Preference(client, args)
 	if (!GetConVarBool(cvar_Preference))
 	{
 		ReplyToCommand(client, "\x01\x04[SM]\x01 %t", "PrefDisabled");
+		
 		return Plugin_Handled;
 	}
 	
@@ -652,9 +656,14 @@ public Action:cmd_Preference(client, args)
 		if (g_aPlayers[client][iTeamPreference] != 0)
 		{
 			if (g_aPlayers[client][iTeamPreference] == TEAM_RED)
+			{
 				ReplyToCommand(client, "RED");
+			}
 			else
+			{
 				ReplyToCommand(client, "BLU");
+			}
+			
 			return Plugin_Handled;		
 		}
 	}
@@ -817,6 +826,7 @@ public OnConfigsExecuted()
 	if (GetFeatureStatus(FeatureType_Native, "HLXCE_GetPlayerData") == FeatureStatus_Available)
 	{
 		g_bUseHlxCe = true;
+		
 		LogMessage("HlxCe Available");
 	}
 	else
@@ -828,12 +838,14 @@ public OnConfigsExecuted()
 	
 	if (GetFeatureStatus(FeatureType_Native, "QueryGameMEStats") == FeatureStatus_Available)
 	{
-		LogMessage("GameMe Available");
 		g_bUseGameMe = true;
+		
+		LogMessage("GameMe Available");
 	}
 	else
 	{
 		g_bUseGameMe = false;
+		
 		LogMessage("GameMe Unavailavble");
 	}
 	
@@ -868,6 +880,7 @@ public OnConfigsExecuted()
 			if (GetConVarBool(FindConVar("mp_autoteambalance")))
 			{
 				LogAction(-1, 0, "set mp_autoteambalance to false");
+				
 				SetConVarBool(FindConVar("mp_autoteambalance"), false);
 			}
 		}
@@ -898,7 +911,6 @@ public OnConfigsExecuted()
 	
 	//shut off tf2's built in auto-scramble
 	//if gscramble's auto modes are enabled.
-	
 	if (bAuto && GetConVarBool(FindConVar("mp_scrambleteams_auto")))
 	{
 		SetConVarBool(FindConVar("mp_scrambleteams_auto"), false);
@@ -918,6 +930,7 @@ public OnConfigsExecuted()
 			if (g_bHooked)
 			{
 				LogAction(-1, 0, "Unhooking events since it's arena, and tf_arena_use_queue is enabled");
+				
 				unHook();
 			}
 			
@@ -942,6 +955,7 @@ public OnConfigsExecuted()
 	}
 	
 	new Float:fAd = GetConVarFloat(cvar_VoteAd);
+	
 	if (fAd > 0.0)
 	{
 		g_hVoteAdTimer = CreateTimer(fAd, Timer_VoteAd, _, TIMER_REPEAT);
@@ -1740,7 +1754,7 @@ Float:GetAvgScoreDifference(team)
 	for (new i = 1; i <= MaxClients; i++)
 	{
 		new entity = GetPlayerResourceEntity();
-		new Totalscore = GetEntProp(entity, Prop_Send, "m_iScore", i);
+		new Totalscore = GetEntProp(entity, Prop_Send, "m_iScore", _, i); 
 		
 		if (IsClientInGame(i) && IsValidTeam(i))
 		{
@@ -2430,7 +2444,7 @@ bool:IsNotTopPlayer(client, team)  // this arranges teams based on their score, 
 		if (IsClientInGame(i) && GetClientTeam(i) == team)
 		{		
 			new entity = GetPlayerResourceEntity();
-			new Totalscore = GetEntProp(entity, Prop_Send, "m_iScore", client);
+			new Totalscore = GetEntProp(entity, Prop_Send, "m_iScore", _, client); 
 			//TF2_GetPlayerResourceData(i, TFResource_TotalScore);
 			iScores[iSize][1] = 1 + Totalscore;
 			iScores[iSize][0] = i;
