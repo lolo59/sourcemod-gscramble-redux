@@ -51,7 +51,7 @@ comment these 2 lines if you want to compile without those thingies.
 #endif
 #define REQUIRE_PLUGIN
 
-#define VERSION "3.0.18"
+#define VERSION "3.0.19"
 #define TEAM_RED 2
 #define TEAM_BLUE 3
 #define SCRAMBLE_SOUND  "vo/announcer_am_teamscramble03.wav"
@@ -1420,7 +1420,8 @@ public Action:Event_PlayerDisconnect(Handle:event, const String:name[], bool:don
 		*/
 		if (g_bUseClientPrefs && g_bForceTeam && g_bForceReconnect && IsClientInGame(client) && IsValidTeam(client) && (g_bTeamsLocked || IsBlocked(client)))
 		{
-			decl String:blockTime[128], String:teamIndex[5], iIndex, String:serverIp[50], String:serverPort[10], String:startTime[33];
+			decl String:blockTime[128], String:teamIndex[5], String:serverIp[50], String:serverPort[10], String:startTime[33];
+			new iIndex;
 			GetConVarString(FindConVar("hostip"), serverIp, sizeof(serverIp));
 			GetConVarString(FindConVar("hostport"), serverPort, sizeof(serverPort));
 			Format(serverIp, sizeof(serverIp), "%s%s", serverIp, serverPort);
@@ -1569,7 +1570,8 @@ public Action:timer_Restore(Handle:timer, any:id)
 	new String:sIndex[10], iIndex;
 	GetClientCookie(client, g_cookie_teamIndex, sIndex, sizeof(sIndex));
 	
-	if ((iIndex = StringToInt(sIndex)) > 1)
+	iIndex = StringToInt(sIndex);
+	if (iIndex != 0 || iIndex != 1)
 	{
 		return Plugin_Handled;
 	}
