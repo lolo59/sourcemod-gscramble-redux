@@ -20,17 +20,7 @@ You should have received a copy of the GNU General Public License
 along with this plugin.  If not, see <http://www.gnu.org/licenses/>.
 *************************************************************************
 *************************************************************************
-File Information
-$Id: gscramble.sp 164 2012-08-20 09:42:59Z brutalgoergectf@gmail.com $
-$Author: brutalgoergectf@gmail.com $
-$Revision: 164 $
-$Date: 2012-08-20 03:42:59 -0600 (Mon, 20 Aug 2012) $
-$LastChangedBy: brutalgoergectf@gmail.com $
-$LastChangedDate: 2012-08-20 03:42:59 -0600 (Mon, 20 Aug 2012) $
-$URL: https://tf2tmng.googlecode.com/svn/trunk/gscramble/addons/sourcemod/scripting/gscramble.sp $
-$Copyright: (c) Tf2Tmng 2009-2011$
-*************************************************************************
-*************************************************************************
+
 */
 #pragma semicolon 1
 #include <sourcemod>
@@ -61,10 +51,10 @@ comment these 2 lines if you want to compile without those thingies.
 #endif
 #define REQUIRE_PLUGIN
 
-#define VERSION "3.0.16"
+#define VERSION "3.0.18"
 #define TEAM_RED 2
 #define TEAM_BLUE 3
-#define SCRAMBLE_SOUND "vo/announcer_am_teamscramble03.wav"
+#define SCRAMBLE_SOUND  "vo/announcer_am_teamscramble03.wav"
 #define EVEN_SOUND		"vo/announcer_am_teamscramble01.wav"
 
 /**
@@ -1749,7 +1739,6 @@ PerformBalance(client)
 Float:GetAvgScoreDifference(team)
 {
 	new teamScores, otherScores, Float:otherAvg, Float:teamAvg;
-
 	
 	for (new i = 1; i <= MaxClients; i++)
 	{
@@ -1759,13 +1748,12 @@ Float:GetAvgScoreDifference(team)
 		if (IsClientInGame(i) && IsValidTeam(i))
 		{
 			if (GetClientTeam(i) == team)
-			{	
-				
-				teamScores += Totalscore; //TF2_GetPlayerResourceData(i, TFResource_TotalScore);
+			{
+				teamScores += Totalscore; 
 			}
 			else
 			{
-				otherScores += Totalscore; //TF2_GetPlayerResourceData(i, TFResource_TotalScore);
+				otherScores += Totalscore;
 			}
 		}
 	}
@@ -2444,8 +2432,8 @@ bool:IsNotTopPlayer(client, team)  // this arranges teams based on their score, 
 		if (IsClientInGame(i) && GetClientTeam(i) == team)
 		{		
 			new entity = GetPlayerResourceEntity();
-			new Totalscore = GetEntProp(entity, Prop_Send, "m_iScore", _, client); 
-			//TF2_GetPlayerResourceData(i, TFResource_TotalScore);
+			new Totalscore = GetEntProp(entity, Prop_Send, "m_iTotalScore", _, i); 
+
 			iScores[iSize][1] = 1 + Totalscore;
 			iScores[iSize][0] = i;
 			
