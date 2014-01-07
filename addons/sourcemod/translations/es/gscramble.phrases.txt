@@ -1,12 +1,12 @@
-﻿"Phrases"
+"Phrases"
 {
 	"BlockJointeam"
 	{
-		"es" 			"Cambio de Equipo Bloqueado. Este servidor realiza una selección automática de equipos."
+		"es" 			"Cambio de Equipo Bloqueado."
 	}
 	"VoteAd"
 	{
-		"es"			"Teclea '{1}' para iniciar una votación para mezclar los equipos"
+		"es"			"Teclea '{1}' para iniciar una votación Scramble entre equipos"
 	}
 	"YourBuddyLeft"
 	{
@@ -26,11 +26,11 @@
 	}
 	"AddedBuddy"
 	{
-		"es"			"{1} es ahora tu amigo"
+		"es"			"{1} ahora es tu amigo."
 	}
 	"SomeoneAddedYou"
 	{
-		"es"			"¡{1} te ha escogido para que seas su amigo!"
+		"es"			"{1} te ha escogido para que seas su amigo!"
 	}
 	"ChoseANewBuddy"
 	{
@@ -50,7 +50,7 @@
 	}
 	"FlagBalance"
 	{
-		"es"		"Desequilibrio detectado. Una posible acción al respecto comenzará en {1} segundo(s)."
+		"es"			"Desequilibrio detectado. Una posible acción al respecto comenzará en {1} segundo(s)"
 	}
 	"RestoreInnocentTeam"
 	{
@@ -110,7 +110,7 @@
 	}
 	"FragDetection"
 	{
-		"es"		"El equipo ganador excedió el ratio límite de frags"
+		"es"		"El equipo ganador excedió el ratio límite de frags."
 	}
 	"DominationMessage"
 	{
@@ -118,7 +118,7 @@
 	}
 	"RatioMessage"
 	{
-		"es"		"Diferencia detectada en la media jugadores-puntuación"
+		"es"		"Diferencia detectada en la media jugadores-puntuación."
 	}
 	"VoteRoundTimeReply"
 	{
@@ -180,8 +180,7 @@
 	"RedStreak"
 	{
 		"es"		"El equipo RED alcanzó el límite de victorias requerido para mezclar los equipos."
-	}
-	
+	}	
 	"BluStreak"
 	{
 		"es"		"El equipo BLU alcanzó el límite de victorias requerido para mezclar los equipos."
@@ -248,6 +247,6 @@
 	}
 	"StatsMessage"
 	{
-		"es"		"La mezcla de equipos trasladó {1} de {2} jugadores. {3}%"
+		"es"		"Scramble cambió {1} por{2} jugadores. {3}%"
 	}
 }
