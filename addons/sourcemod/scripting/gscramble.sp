@@ -49,9 +49,10 @@ comment these 2 lines if you want to compile without those thingies.
 #if defined HLXCE_INCLUDED
 #include <hlxce-sm-api>
 #endif
+#include <nativevotes>
 #define REQUIRE_PLUGIN
 
-#define VERSION "3.0.19"
+#define VERSION "3.0.19p"
 #define TEAM_RED 2
 #define TEAM_BLUE 3
 #define SCRAMBLE_SOUND  "vo/announcer_am_teamscramble03.wav"
@@ -187,6 +188,8 @@ new bool:g_bScrambleNextRound = false,
 	*/
 	bool:g_bScrambleOverride;  // allows for the scramble check to be blocked by admin
 
+new bool:g_bUseNativeVotes = false;
+	
 new g_iTeamIds[2] = {TEAM_RED, TEAM_BLUE};
 
 new	g_iPluginStartTime,
@@ -428,6 +431,8 @@ public OnAllPluginsLoaded()
 	{	
 		OnAdminMenuReady(gTopMenu);
 	}
+	
+	g_bUseNativeVotes = LibraryExists("nativevotes") && NativeVotes_IsVoteTypeSupported(NativeVotesType_ScrambleNow);
 }
 
 stock CheckTranslation()
@@ -1884,7 +1889,7 @@ stock AttemptScrambleVote(client)
 		return;
 	}	
 	
-	if (g_iVotesNeeded - g_iVotes == 1 && GetConVarInt(cvar_VoteMode) == 1 && IsVoteInProgress())
+	if (g_iVotesNeeded - g_iVotes == 1 && GetConVarInt(cvar_VoteMode) == 1 && ((!g_bUseNativeVotes && IsVoteInProgress() || g_bUseNativeVotes && NativeVotes_IsVoteInProgress())))
 	{
 		ReplyToCommand(client, "\x01\x04[SM]\x01 %t", "Vote in Progress");
 		return;
@@ -1955,7 +1960,7 @@ stock AttemptScrambleVote(client)
 
 public Action:cmd_Vote(client, args)
 {
-	if (IsVoteInProgress())
+	if ((!g_bUseNativeVotes && IsVoteInProgress()) || (g_bUseNativeVotes && NativeVotes_IsVoteInProgress()))
 	{
 		ReplyToCommand(client, "\x01\x04[SM]\x01 %t", "Vote in Progress");
 		return Plugin_Handled;
@@ -2015,7 +2020,7 @@ PerformVote(client, ScrambleTime:mode)
 		return;
 	}	
 	
-	if (IsVoteInProgress())
+	if ((!g_bUseNativeVotes && IsVoteInProgress()) || (g_bUseNativeVotes && NativeVotes_IsVoteInProgress()))
 	{
 		ReplyToCommand(client, "\x01\x04[SM]\x01 %t", "Vote in Progress");
 		return;
@@ -2039,7 +2044,7 @@ PerformVote(client, ScrambleTime:mode)
 
 StartScrambleVote(ScrambleTime:mode, time=20)
 {
-	if (IsVoteInProgress())
+	if ((!g_bUseNativeVotes && IsVoteInProgress()) || (g_bUseNativeVotes && NativeVotes_IsVoteInProgress()))
 	{
 		PrintToChatAll("\x01\x04[SM]\x01 %t", "VoteWillStart");
 		CreateTimer(1.0, Timer_ScrambleVoteStarter, mode, TIMER_REPEAT|TIMER_FLAG_NO_MAPCHANGE);
@@ -2047,30 +2052,49 @@ StartScrambleVote(ScrambleTime:mode, time=20)
 	}
 	
 	DelayPublicVoteTriggering();
-	g_hScrambleVoteMenu = CreateMenu(Handler_VoteCallback, MenuAction:MENU_ACTIONS_ALL);
-	
-	new String:sTmpTitle[64];
-	if (mode == Scramble_Now)
+	if (g_bUseNativeVotes)
 	{
-		g_bScrambleAfterVote = true;
-		Format(sTmpTitle, 64, "Scramble Teams Now?");
+		new NativeVotesType:voteType;
+		if (mode == Scramble_Now)
+		{
+			g_bScrambleAfterVote = true;
+			voteType = NativeVotesType_ScrambleNow;
+		}
+		else
+		{
+			g_bScrambleAfterVote = false;
+			voteType = NativeVotesType_ScrambleEnd;
+		}
+		g_hScrambleVoteMenu = NativeVotes_Create(Handler_NativeVoteCallback, voteType, MenuAction:MENU_ACTIONS_ALL);
+		NativeVotes_DisplayToAll(g_hScrambleVoteMenu, time);
 	}
 	else
 	{
-		g_bScrambleAfterVote = false;
-		Format(sTmpTitle, 64, "Scramble Teams Next Round?");
-	}
+		g_hScrambleVoteMenu = CreateMenu(Handler_VoteCallback, MenuAction:MENU_ACTIONS_ALL);
 	
-	SetMenuTitle(g_hScrambleVoteMenu, sTmpTitle);
-	AddMenuItem(g_hScrambleVoteMenu, "1", "Yes");
-	AddMenuItem(g_hScrambleVoteMenu, "2", "No");
-	SetMenuExitButton(g_hScrambleVoteMenu, false);
-	VoteMenuToAll(g_hScrambleVoteMenu, time);
+		new String:sTmpTitle[64];
+		if (mode == Scramble_Now)
+		{
+			g_bScrambleAfterVote = true;
+			Format(sTmpTitle, 64, "Scramble Teams Now?");
+		}
+		else
+		{
+			g_bScrambleAfterVote = false;
+			Format(sTmpTitle, 64, "Scramble Teams Next Round?");
+		}
+		
+		SetMenuTitle(g_hScrambleVoteMenu, sTmpTitle);
+		AddMenuItem(g_hScrambleVoteMenu, "1", "Yes");
+		AddMenuItem(g_hScrambleVoteMenu, "2", "No");
+		SetMenuExitButton(g_hScrambleVoteMenu, false);
+		VoteMenuToAll(g_hScrambleVoteMenu, time);
+	}
 }
 
 public Action:Timer_ScrambleVoteStarter(Handle:timer, any:mode)
 {
-	if (IsVoteInProgress())
+	if ((!g_bUseNativeVotes && IsVoteInProgress()) || (g_bUseNativeVotes && NativeVotes_IsVoteInProgress()))
 	{
 		return Plugin_Continue;
 	}
@@ -2128,6 +2152,58 @@ public Handler_VoteCallback(Handle:menu, MenuAction:action, param1, param2)
 			LogAction(-1 , 0, "%T", "VoteFailed", LANG_SERVER, against, totalVotes);
 		}
 	}
+}
+
+public Handler_NativeVoteCallback(Handle:menu, MenuAction:action, param1, param2)
+{
+	DelayPublicVoteTriggering();
+	
+	if (action == MenuAction_End)
+	{
+		NativeVotes_Close(g_hScrambleVoteMenu);
+		g_hScrambleVoteMenu = INVALID_HANDLE;
+	}		
+	
+	if (action == MenuAction_VoteEnd)
+	{	
+		new m_votes, totalVotes;		
+		NativeVotes_GetInfo(param2, m_votes, totalVotes);
+		
+		if (param1 == 1)
+		{
+			m_votes = totalVotes - m_votes;
+		}
+		
+		new Float:comp = FloatDiv(float(m_votes),float(totalVotes));
+		new Float:comp2 = GetConVarFloat(cvar_Needed);
+		
+		if (comp >= comp2)
+		{
+			NativeVotes_DisplayPass(g_hScrambleVoteMenu);
+			PrintToChatAll("\x01\x04[SM]\x01 %t", "VoteWin", RoundToNearest(comp*100), totalVotes);	
+			LogAction(-1 , 0, "%T", "VoteWin", LANG_SERVER, RoundToNearest(comp*100), totalVotes);	
+			
+			if (g_bScrambleAfterVote)
+			{
+				StartScrambleDelay(5.0, true);
+			}
+			else
+			{
+				if ((g_bFullRoundOnly && g_bWasFullRound) || !g_bFullRoundOnly)
+				{
+					g_bScrambleNextRound = true;
+					PrintToChatAll("\x01\x04[SM]\x01 %t", "ScrambleStartVote");
+				}			
+			}
+		}
+		else
+		{
+			NativeVotes_DisplayFail(g_hScrambleVoteMenu, NativeVotesFail_Loses);
+			new against = 100 - RoundToNearest(comp*100);
+			PrintToChatAll("\x01\x04[SM]\x01 %t", "VoteFailed", against, totalVotes);
+			LogAction(-1 , 0, "%T", "VoteFailed", LANG_SERVER, against, totalVotes);
+		}
+	}	
 }
 
 DelayPublicVoteTriggering(bool:success = false)  // success means a scramble happened... longer delay
@@ -2868,6 +2944,11 @@ public OnLibraryRemoved(const String:name[])
 	{
 		g_bUseGameMe = false;
 	}
+	
+	if (StrEqual(name, "nativevotes"))
+	{
+		g_bUseNativeVotes = false;
+	}
 }
 
 public OnLibraryAdded(const String:name[])
@@ -2885,6 +2966,10 @@ public OnLibraryAdded(const String:name[])
 		{
 			g_bUseGameMe = true;
 		}
+	}
+	if (StrEqual(name, "nativevotes") && NativeVotes_IsVoteTypeSupported(NativeVotesType_ScrambleNow))
+	{
+		g_bUseNativeVotes = true;
 	}
 }
 
