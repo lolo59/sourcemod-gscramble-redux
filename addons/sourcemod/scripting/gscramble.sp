@@ -2169,7 +2169,7 @@ public Handler_NativeVoteCallback(Handle:menu, MenuAction:action, param1, param2
 		new m_votes, totalVotes;		
 		NativeVotes_GetInfo(param2, m_votes, totalVotes);
 		
-		if (param1 == NATIVEVOTES_VOTE_YES)
+		if (param1 == NATIVEVOTES_VOTE_NO)
 		{
 			m_votes = totalVotes - m_votes;
 		}
