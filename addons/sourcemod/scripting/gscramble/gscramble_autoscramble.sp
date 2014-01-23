@@ -141,6 +141,10 @@ stock bool:WinStreakCheck(winningTeam)
 
 stock StartScrambleDelay(Float:delay = 5.0, bool:respawn = false, e_ScrambleModes:mode = invalid)
 {
+	new Handle:event = CreateEvent("teamplay_alert");
+	SetEventInt(event, "alert_type", 0);
+	FireEvent(event);
+	
 	if (g_hScrambleDelay != INVALID_HANDLE)
 	{
 		KillTimer(g_hScrambleDelay);
