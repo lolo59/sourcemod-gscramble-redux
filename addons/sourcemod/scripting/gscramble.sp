@@ -52,7 +52,7 @@ comment these 2 lines if you want to compile without those thingies.
 #include <nativevotes>
 #define REQUIRE_PLUGIN
 
-#define VERSION "3.0.19p"
+#define VERSION "3.0.19p2"
 #define TEAM_RED 2
 #define TEAM_BLUE 3
 #define SCRAMBLE_SOUND  "vo/announcer_am_teamscramble03.wav"
@@ -189,6 +189,7 @@ new bool:g_bScrambleNextRound = false,
 	bool:g_bScrambleOverride;  // allows for the scramble check to be blocked by admin
 
 new bool:g_bUseNativeVotes = false;
+new bool:g_bNativeVotesRegisteredMenus = false;
 	
 new g_iTeamIds[2] = {TEAM_RED, TEAM_BLUE};
 
@@ -433,6 +434,11 @@ public OnAllPluginsLoaded()
 	}
 	
 	g_bUseNativeVotes = LibraryExists("nativevotes") && NativeVotes_IsVoteTypeSupported(NativeVotesType_ScrambleNow);
+	
+	if (g_bUseNativeVotes)
+	{
+		RegisterNativeVotesHandler();
+	}
 }
 
 stock CheckTranslation()
@@ -696,6 +702,11 @@ public OnPluginEnd()
 	if (g_bAutoBalance)
 	{
 		ServerCommand("mp_autoteambalance 1");
+	}
+	
+	if (g_bNativeVotesRegisteredMenus)
+	{
+		NativeVotes_UnregisterVoteCommand("ScrambleTeams", NativeVotes_Menu);
 	}
 }
 
@@ -1849,22 +1860,34 @@ stock PerformScrambleNow(client, Float:fDelay = 5.0, bool:respawn = false, e_Scr
 	StartScrambleDelay(fDelay, respawn, mode);
 }
 
-stock AttemptScrambleVote(client)
+stock AttemptScrambleVote(client, bool:isVoteMenu=false)
 {	
 	if (g_bArenaMode)
 	{
+		if (isVoteMenu && g_bUseNativeVotes)
+		{
+			NativeVotes_DisplayCallVoteFail(client, NativeVotesCallFail_Disabled);
+		}
 		ReplyToCommand(client, "\x01\x04[SM]\x01 %t", "ArenaReply");
 		return;
 	}
 	
 	if (GetConVarBool(cvar_AdminBlockVote) && g_iNumAdmins > 0)
 	{
+		if (isVoteMenu && g_bUseNativeVotes)
+		{
+			NativeVotes_DisplayCallVoteFail(client, NativeVotesCallFail_Disabled);
+		}
 		ReplyToCommand(client, "\x01x04[SM] %t", "AdminBlockVoteReply");
 		return;
 	}
 	
 	if (!g_bHooked)
 	{
+		if (isVoteMenu && g_bUseNativeVotes)
+		{
+			NativeVotes_DisplayCallVoteFail(client, NativeVotesCallFail_Disabled);
+		}
 		ReplyToCommand(client, "\x01\x04[SM]\x01 %t", "EnableReply");
 		return;
 	}	
@@ -1873,18 +1896,30 @@ stock AttemptScrambleVote(client)
 		
 	if (!GetConVarBool(cvar_VoteEnable))
 	{
+		if (isVoteMenu && g_bUseNativeVotes)
+		{
+			NativeVotes_DisplayCallVoteFail(client, NativeVotesCallFail_Disabled);
+		}
 		ReplyToCommand(client, "\x01\x04[SM]\x01 %t", "VoteDisabledReply");
 		return;
 	}
 	
 	if (g_bNoSequentialScramble && g_bScrambledThisRound)
 	{
+		if (isVoteMenu && g_bUseNativeVotes)
+		{
+			NativeVotes_DisplayCallVoteFail(client, NativeVotesCallFail_Disabled);
+		}
 		ReplyToCommand(client, "\x01\x04[SM]\x01 %t", "ScrambledAlready");
 		return;
 	}
 	
 	if (!g_bVoteAllowed)
 	{
+		if (isVoteMenu && g_bUseNativeVotes)
+		{
+			NativeVotes_DisplayCallVoteFail(client, NativeVotesCallFail_Loading);
+		}
 		ReplyToCommand(client, "\x01\x04[SM]\x01 %t", "VoteDelayedReply");
 		return;
 	}	
@@ -1897,18 +1932,30 @@ stock AttemptScrambleVote(client)
 	
 	if (GetConVarInt(cvar_MinPlayers) > g_iVoters)
 	{
+		if (isVoteMenu && g_bUseNativeVotes)
+		{
+			NativeVotes_DisplayCallVoteFail(client, NativeVotesCallFail_Loading);
+		}
 		ReplyToCommand(client, "\x01\x04[SM]\x01 %t", "NotEnoughPeopleVote");
 		return;
 	}	
 	
 	if (g_aPlayers[client][bHasVoted] == true)
 	{
+		if (isVoteMenu && g_bUseNativeVotes)
+		{
+			NativeVotes_DisplayCallVoteFail(client, NativeVotesCallFail_Generic);
+		}
 		ReplyToCommand(client, "\x01\x04[SM]\x01 %t", "AlreadyVoted");
 		return;
 	}	
 	
 	if (g_bScrambleNextRound)
 	{
+		if (isVoteMenu && g_bUseNativeVotes)
+		{
+			NativeVotes_DisplayCallVoteFail(client, NativeVotesCallFail_ScramblePending);
+		}
 		ReplyToCommand(client, "\x01\x04[SM]\x01 %t", "ScrambleReply");		
 		return;
 	}
@@ -2970,7 +3017,32 @@ public OnLibraryAdded(const String:name[])
 	if (StrEqual(name, "nativevotes") && NativeVotes_IsVoteTypeSupported(NativeVotesType_ScrambleNow))
 	{
 		g_bUseNativeVotes = true;
+		RegisterNativeVotesHandler();
 	}
+}
+
+RegisterNativeVotesHandler()
+{
+	if (!g_bUseNativeVotes || g_bNativeVotesRegisteredMenus)
+		return;
+		
+	g_bNativeVotesRegisteredMenus = true;
+	
+	NativeVotes_RegisterVoteCommand("ScrambleTeams", NativeVotes_Menu);
+}
+
+public Action:NativeVotes_Menu(client, const String:voteCommand[], const String:voteArgument[], NativeVotesKickType:kickType, target)
+{
+	if (!IsFakeClient(client))
+	{
+		new ReplySource:old = SetCmdReplySource(SM_REPLY_TO_CHAT);
+
+		AttemptScrambleVote(client, true);
+
+		SetCmdReplySource(old);
+	}
+	
+	return Plugin_Handled;
 }
 
 public SortScoreDesc(x[], y[], array[][], Handle:data)
