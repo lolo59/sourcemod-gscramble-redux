@@ -134,6 +134,9 @@ new Handle:g_hAdminMenu 			= INVALID_HANDLE,
 	new Handle:g_hGameMeUpdateTimer 	= INVALID_HANDLE;
 #endif
 
+// Valve cvar
+new Handle:cvar_ValveScramble = INVALID_HANDLE;
+
 /**
 timer handles
 */
@@ -428,6 +431,8 @@ public OnAllPluginsLoaded()
 	{	
 		OnAdminMenuReady(gTopMenu);
 	}
+	
+	cvar_ValveScramble = FindConVar("sv_vote_issue_scramble_teams_allowed");
 }
 
 stock CheckTranslation()
@@ -905,6 +910,13 @@ public OnConfigsExecuted()
 	{
 		SetConVarBool(FindConVar("mp_scrambleteams_auto"), false);
 		LogMessage("Setting mp_scrambleteams_auto false");
+	}
+	
+	//shut off tf2's built-in vote scramble
+	if (GetConVarBool(cvar_ValveScramble))
+	{
+		SetConVarBool(cvar_ValveScramble, false);
+		LogMessage("Setting sv_vote_issue_scramble_teams_allowed false");
 	}
 	
 	if (GetConVarBool(cvar_Koth) && strncmp(sMapName, "koth_", 5, false) == 0)
