@@ -126,7 +126,8 @@ new Handle:cvar_Version				= INVALID_HANDLE,
 	Handle:cvar_AbHumanOnly			= INVALID_HANDLE,
 	Handle:cvar_LockTeamsFullRound  	= INVALID_HANDLE,
 	Handle:cvar_SelectSpectators 		= INVALID_HANDLE,
-	Handle:cvar_OneScramblePerRound 		= INVALID_HANDLE;
+	Handle:cvar_OneScramblePerRound 		= INVALID_HANDLE,
+	Handle:cvar_NativeVotesMenu		= INVALID_HANDLE;
 
 new Handle:g_hAdminMenu 			= INVALID_HANDLE,
 	Handle:g_hScrambleVoteMenu 		= INVALID_HANDLE,
@@ -396,6 +397,9 @@ public OnPluginStart()
 	cvar_OneScramblePerRound =  CreateConVar("gs_onescrambleperround", "1", "If enabled, will only allow only allow one scramble per round", FCVAR_PLUGIN, true, 0.0, true, 1.0);
 	
 	cvar_Version			= CreateConVar("gscramble_version", VERSION, "Gscramble version", FCVAR_PLUGIN|FCVAR_SPONLY|FCVAR_REPLICATED|FCVAR_NOTIFY|FCVAR_DONTRECORD);
+	
+	cvar_NativeVotesMenu = CreateConVar("gs_nativevotes_menu", "1", "Add ScrambleTeams to NativeVotes menu", FCVAR_PLUGIN, true, 0.0, true, 1.0);
+	
 	RegCommands();
 	
 	/**
@@ -2995,6 +2999,7 @@ public OnLibraryRemoved(const String:name[])
 	if (StrEqual(name, "nativevotes"))
 	{
 		g_bUseNativeVotes = false;
+		g_bNativeVotesRegisteredMenus = false;
 	}
 }
 
@@ -3026,6 +3031,9 @@ RegisterNativeVotesHandler()
 	if (!g_bUseNativeVotes || g_bNativeVotesRegisteredMenus)
 		return;
 		
+	if (!GetConVarBool(cvar_NativeVotesMenu) || GetFeatureStatus(FeatureType_Native, "NativeVotes_RegisterVoteCommand") != FeatureStatus_Available)
+		return;
+	
 	g_bNativeVotesRegisteredMenus = true;
 	
 	NativeVotes_RegisterVoteCommand("ScrambleTeams", NativeVotes_Menu);
