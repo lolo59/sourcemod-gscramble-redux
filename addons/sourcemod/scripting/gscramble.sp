@@ -1306,7 +1306,7 @@ add protection to those interacting with the CTF flag
 public hook_FlagEvent(Handle:event, const String:name[], bool:dontBroadcast)
 {
 	new client = GetEventInt(event, "player");
-	new type = GetEventInt(event, "evettype");
+	new type = GetEventInt(event, "eventtype");
 	
 	switch (type)
 	{
