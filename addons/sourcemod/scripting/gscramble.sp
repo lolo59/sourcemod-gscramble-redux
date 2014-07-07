@@ -52,7 +52,7 @@ comment these 2 lines if you want to compile without those thingies.
 #include <nativevotes>
 #define REQUIRE_PLUGIN
 
-#define VERSION "3.0.19p"
+#define VERSION "3.0.20pl"
 #define TEAM_RED 2
 #define TEAM_BLUE 3
 #define SCRAMBLE_SOUND  "vo/announcer_am_teamscramble03.wav"
